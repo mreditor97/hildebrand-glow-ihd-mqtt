@@ -25,7 +25,8 @@ from homeassistant.const import (
 )
 from homeassistant.core import callback
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
-from homeassistant.util import slugify
+from homeassistant.helpers.restore_state import ExtraStoredData, RestoreEntity
+from homeassistant.util import dt as dt_util, slugify
 
 from .const import (
     CONF_TIME_ZONE_ELECTRICITY,
@@ -42,26 +43,6 @@ _LOGGER = logging.getLogger(__name__)
 # glow/XXXXXXYYYYYY/STATE                   {"software":"v1.8.12","timestamp":"2022-06-11T20:54:53Z","hardware":"GLOW-IHD-01-1v4-SMETS2","ethmac":"1234567890AB","smetsversion":"SMETS2","eui":"12:34:56:78:91:23:45","zigbee":"1.2.5","han":{"rssi":-75,"status":"joined","lqi":100}}
 # glow/XXXXXXYYYYYY/SENSOR/electricitymeter {"electricitymeter":{"timestamp":"2022-06-11T20:38:00Z","energy":{"export":{"cumulative":0.000,"units":"kWh"},"import":{"cumulative":6613.405,"day":13.252,"week":141.710,"month":293.598,"units":"kWh","mpan":"1234","supplier":"ABC ENERGY","price":{"unitrate":0.04998,"standingcharge":0.24030}}},"power":{"value":0.951,"units":"kW"}}}
 # glow/XXXXXXYYYYYY/SENSOR/gasmeter         {"gasmeter":{"timestamp":"2022-06-11T20:53:52Z","energy":{"export":{"cumulative":0.000,"units":"kWh"},"import":{"cumulative":17940.852,"day":11.128,"week":104.749,"month":217.122,"units":"kWh","mprn":"1234","supplier":"---","price":{"unitrate":0.07320,"standingcharge":0.17850}}},"power":{"value":0.000,"units":"kW"}}}
-
-def calculate_cost_today(meter_data: dict) -> float | None:
-    """Return today's cost (standing charge + day kWh * unit rate).
-
-    The IHD publishes ``null`` for the unit rate and/or standing charge when
-    the supplier has not sent tariff data to the meter. Rather than raising a
-    TypeError on every message, treat a missing component as zero and only
-    report unknown (None) when there is no price information at all.
-    """
-    energy_import = meter_data["energy"]["import"]
-    price = energy_import.get("price") or {}
-    unit_rate = price.get("unitrate")
-    standing_charge = price.get("standingcharge")
-    if unit_rate is None and standing_charge is None:
-        return None
-    return round(
-        (standing_charge or 0) + (energy_import.get("day") or 0) * (unit_rate or 0),
-        2,
-    )
-
 
 STATE_SENSORS = [
     {
@@ -190,8 +171,8 @@ ELECTRICITY_SENSORS = [
         "unit_of_measurement": "GBP",
         "state_class": SensorStateClass.TOTAL,
         "icon": "mdi:cash",
-        "meter_interval": MeterInterval.DAY,
-        "func": lambda js: calculate_cost_today(js["electricitymeter"]),
+        "entity_class": "cost",
+        "cost_meter": "electricitymeter",
     },
 ]
 
@@ -297,8 +278,8 @@ GAS_SENSORS = [
         "unit_of_measurement": "GBP",
         "state_class": SensorStateClass.TOTAL,
         "icon": "mdi:cash",
-        "meter_interval": MeterInterval.DAY,
-        "func": lambda js: calculate_cost_today(js["gasmeter"]),
+        "entity_class": "cost",
+        "cost_meter": "gasmeter",
     },
 ]
 
@@ -375,6 +356,13 @@ async def async_get_device_groups(
     return deviceUpdateGroups[device_id]
 
 
+def _create_sensor(entity_class: str | None = None, **kwargs) -> HildebrandGlowMqttSensor:
+    """Create the sensor entity described by a sensor definition."""
+    if entity_class == "cost":
+        return HildebrandGlowMqttCostSensor(**kwargs)
+    return HildebrandGlowMqttSensor(**kwargs)
+
+
 class HildebrandGlowMqttSensorUpdateGroup:
     """Representation of Hildebrand Glow MQTT Meter Sensors that all get updated together."""
 
@@ -384,7 +372,7 @@ class HildebrandGlowMqttSensorUpdateGroup:
         """Initialize the sensor collection."""
         self._topic_regex = re.compile(topic_regex)
         self._sensors = [
-            HildebrandGlowMqttSensor(device_id=device_id, time_zone=time_zone, **meter)
+            _create_sensor(device_id=device_id, time_zone=time_zone, **meter)
             for meter in meters
         ]
 
@@ -535,3 +523,184 @@ class HildebrandGlowMqttSensor(SensorEntity):
     def extra_state_attributes(self):
         """Return the state attributes."""
         return {ATTR_DEVICE_ID: self._device_id}
+
+
+# A drop in the day's kWh to below this fraction of the highest value seen in
+# the current cycle is treated as the meter resetting its daily total. Smaller
+# drops are treated as meter corrections and ignored.
+COST_RESET_RATIO = 0.9
+# If no message has been processed for longer than this (e.g. Home Assistant
+# was stopped), the day total can't be compared reliably, so start a new cycle.
+COST_STALE_AFTER = timedelta(hours=24)
+
+
+class HildebrandGlowCostExtraStoredData(ExtraStoredData):
+    """Accrual state for the cost sensor, persisted across restarts."""
+
+    def __init__(self, data: dict) -> None:
+        """Initialise the stored data."""
+        self.data = data
+
+    def as_dict(self) -> dict:
+        """Return a dict representation of the stored data."""
+        return self.data
+
+
+class HildebrandGlowMqttCostSensor(HildebrandGlowMqttSensor, RestoreEntity):
+    """Today's cost (standing charge + energy used today), accrued per message.
+
+    The IHD only publishes the day's total kWh and the *current* unit rate.
+    Multiplying the two revalues everything used so far today whenever the
+    rate changes (time-of-use / Economy 7 tariffs), producing jumps up when the
+    rate rises and negative "costs" when it falls. Instead, each increase in the
+    day's kWh is priced at the unit rate in force when it was reported.
+
+    A new cycle (and ``last_reset``) starts when the meter's daily total
+    actually resets, rather than at a fixed clock time, so meters whose day
+    rolls over at a different time to the configured time zone (e.g. gas
+    meters on UTC) don't produce a negative value at the start of the day.
+    """
+
+    def __init__(self, cost_meter: str, **kwargs) -> None:
+        """Initialize the sensor."""
+        super().__init__(func=None, **kwargs)
+        self._cost_meter = cost_meter
+        self._accrued: float | None = None
+        self._standing_charge: float | None = None
+        self._cycle_kwh: float | None = None
+        self._last_rate: float | None = None
+        self._last_message_time: datetime | None = None
+        self._attr_last_reset = None
+
+    async def async_added_to_hass(self) -> None:
+        """Restore the accrual state."""
+        await super().async_added_to_hass()
+        if (extra_data := await self.async_get_last_extra_data()) is None:
+            return
+        data = extra_data.as_dict()
+        try:
+            self._accrued = data.get("accrued")
+            self._standing_charge = data.get("standing_charge")
+            self._cycle_kwh = data.get("cycle_kwh")
+            self._last_rate = data.get("last_rate")
+            self._attr_last_reset = _parse_datetime(data.get("last_reset"))
+            self._last_message_time = _parse_datetime(data.get("last_message_time"))
+        except (TypeError, ValueError):
+            _LOGGER.debug("Unable to restore state of %s", self._attr_unique_id)
+            self._accrued = self._standing_charge = self._cycle_kwh = None
+            self._last_rate = self._attr_last_reset = self._last_message_time = None
+            return
+        self._attr_native_value = self._current_cost()
+
+    @property
+    def extra_restore_state_data(self) -> HildebrandGlowCostExtraStoredData:
+        """Return the accrual state to be persisted."""
+        return HildebrandGlowCostExtraStoredData(
+            {
+                "accrued": self._accrued,
+                "standing_charge": self._standing_charge,
+                "cycle_kwh": self._cycle_kwh,
+                "last_rate": self._last_rate,
+                "last_reset": _format_datetime(self._attr_last_reset),
+                "last_message_time": _format_datetime(self._last_message_time),
+            }
+        )
+
+    def _current_cost(self) -> float | None:
+        if self._accrued is None and self._standing_charge is None:
+            return None
+        return round((self._standing_charge or 0) + (self._accrued or 0), 2)
+
+    def _meter_time_zone(self) -> ZoneInfo:
+        if self._time_zone:
+            return ZoneInfo(self._time_zone)
+        if self.hass is not None and self.hass.config is not None:
+            return ZoneInfo(self.hass.config.time_zone)
+        return ZoneInfo("UTC")
+
+    def _is_new_cycle(
+        self, day_kwh: float, message_time: datetime, cycle_start: datetime
+    ) -> bool:
+        if self._cycle_kwh is None or self._attr_last_reset is None:
+            return True
+        if (
+            self._last_message_time is not None
+            and message_time - self._last_message_time > COST_STALE_AFTER
+        ):
+            return True
+        if day_kwh < self._cycle_kwh * COST_RESET_RATIO:
+            # The meter has reset its daily total.
+            return True
+        # A new day with nothing used yet: the kWh total can't drop, so fall
+        # back to the clock to pick up the new day's standing charge.
+        return day_kwh == 0 and cycle_start > self._attr_last_reset
+
+    def process_update(self, mqtt_data) -> None:
+        """Update the state of the sensor."""
+        try:
+            energy_import = mqtt_data[self._cost_meter]["energy"]["import"]
+            day_kwh = energy_import["day"]
+            price = energy_import.get("price") or {}
+            unit_rate = price.get("unitrate")
+            standing_charge = price.get("standingcharge")
+        except (KeyError, TypeError, AttributeError) as err:
+            _LOGGER.debug(
+                "Unable to read cost data for %s from payload (%r).",
+                self._attr_unique_id,
+                err,
+            )
+            return
+        if day_kwh is None:
+            return
+
+        if unit_rate is not None:
+            self._last_rate = unit_rate
+        rate = self._last_rate
+
+        try:
+            message_time = self.get_message_datetime(mqtt_data)
+        except ValueError:
+            message_time = dt_util.utcnow()
+        cycle_start = self.determine_last_reset(
+            message_time, self._meter_time_zone(), MeterInterval.DAY
+        )
+
+        if self._is_new_cycle(day_kwh, message_time, cycle_start):
+            _LOGGER.debug("Starting new cost cycle for %s", self._attr_unique_id)
+            # Usage already on the meter at the start of a cycle can only be
+            # priced at the current rate.
+            self._accrued = day_kwh * rate if rate is not None else None
+            self._standing_charge = standing_charge
+            self._cycle_kwh = day_kwh
+            if self._attr_last_reset is None or cycle_start > self._attr_last_reset:
+                self._attr_last_reset = cycle_start
+            else:
+                # The meter reset at a different time to midnight in the
+                # configured time zone; last_reset must still move forward.
+                self._attr_last_reset = message_time.astimezone(ZoneInfo("UTC"))
+        else:
+            if day_kwh > self._cycle_kwh:
+                if rate is not None:
+                    if self._accrued is None:
+                        self._accrued = day_kwh * rate
+                    else:
+                        self._accrued += (day_kwh - self._cycle_kwh) * rate
+                self._cycle_kwh = day_kwh
+            elif self._accrued is None and rate is not None:
+                self._accrued = day_kwh * rate
+            if self._standing_charge is None:
+                self._standing_charge = standing_charge
+
+        self._last_message_time = message_time
+        self._attr_native_value = self._current_cost()
+
+        if self.hass is not None:
+            self.async_schedule_update_ha_state()
+
+
+def _format_datetime(value: datetime | None) -> str | None:
+    return value.isoformat() if value is not None else None
+
+
+def _parse_datetime(value: str | None) -> datetime | None:
+    return datetime.fromisoformat(value) if value is not None else None
