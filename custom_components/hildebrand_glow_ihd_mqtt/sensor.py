@@ -43,6 +43,26 @@ _LOGGER = logging.getLogger(__name__)
 # glow/XXXXXXYYYYYY/SENSOR/electricitymeter {"electricitymeter":{"timestamp":"2022-06-11T20:38:00Z","energy":{"export":{"cumulative":0.000,"units":"kWh"},"import":{"cumulative":6613.405,"day":13.252,"week":141.710,"month":293.598,"units":"kWh","mpan":"1234","supplier":"ABC ENERGY","price":{"unitrate":0.04998,"standingcharge":0.24030}}},"power":{"value":0.951,"units":"kW"}}}
 # glow/XXXXXXYYYYYY/SENSOR/gasmeter         {"gasmeter":{"timestamp":"2022-06-11T20:53:52Z","energy":{"export":{"cumulative":0.000,"units":"kWh"},"import":{"cumulative":17940.852,"day":11.128,"week":104.749,"month":217.122,"units":"kWh","mprn":"1234","supplier":"---","price":{"unitrate":0.07320,"standingcharge":0.17850}}},"power":{"value":0.000,"units":"kW"}}}
 
+def calculate_cost_today(meter_data: dict) -> float | None:
+    """Return today's cost (standing charge + day kWh * unit rate).
+
+    The IHD publishes ``null`` for the unit rate and/or standing charge when
+    the supplier has not sent tariff data to the meter. Rather than raising a
+    TypeError on every message, treat a missing component as zero and only
+    report unknown (None) when there is no price information at all.
+    """
+    energy_import = meter_data["energy"]["import"]
+    price = energy_import.get("price") or {}
+    unit_rate = price.get("unitrate")
+    standing_charge = price.get("standingcharge")
+    if unit_rate is None and standing_charge is None:
+        return None
+    return round(
+        (standing_charge or 0) + (energy_import.get("day") or 0) * (unit_rate or 0),
+        2,
+    )
+
+
 STATE_SENSORS = [
     {
         "name": "Smart Meter IHD Software Version",
@@ -171,14 +191,7 @@ ELECTRICITY_SENSORS = [
         "state_class": SensorStateClass.TOTAL,
         "icon": "mdi:cash",
         "meter_interval": MeterInterval.DAY,
-        "func": lambda js: round(
-            js["electricitymeter"]["energy"]["import"]["price"]["standingcharge"]
-            + (
-                js["electricitymeter"]["energy"]["import"]["day"]
-                * js["electricitymeter"]["energy"]["import"]["price"]["unitrate"]
-            ),
-            2,
-        ),
+        "func": lambda js: calculate_cost_today(js["electricitymeter"]),
     },
 ]
 
@@ -285,14 +298,7 @@ GAS_SENSORS = [
         "state_class": SensorStateClass.TOTAL,
         "icon": "mdi:cash",
         "meter_interval": MeterInterval.DAY,
-        "func": lambda js: round(
-            (js["gasmeter"]["energy"]["import"]["price"]["standingcharge"] or 0)
-            + (
-                (js["gasmeter"]["energy"]["import"]["day"] or 0)
-                * (js["gasmeter"]["energy"]["import"]["price"]["unitrate"] or 0)
-            ),
-            2,
-        ),
+        "func": lambda js: calculate_cost_today(js["gasmeter"]),
     },
 ]
 
@@ -474,12 +480,24 @@ class HildebrandGlowMqttSensor(SensorEntity):
         )
         try:
             return datetime.fromisoformat(timestamp)
-        except TypeError | ValueError:
-            raise ValueError("Valid timestamp not present in MQTT data.")
+        except (TypeError, ValueError) as err:
+            raise ValueError("Valid timestamp not present in MQTT data.") from err
 
     def process_update(self, mqtt_data) -> None:
         """Update the state of the sensor."""
-        new_value = self._func(mqtt_data)
+        try:
+            new_value = self._func(mqtt_data)
+        except (KeyError, IndexError, TypeError) as err:
+            # A field this sensor depends on is missing or null in the payload
+            # (e.g. no tariff data from the supplier). Report the state as
+            # unknown instead of raising, so the other sensors in the same
+            # update group are still processed.
+            _LOGGER.debug(
+                "Unable to read value for %s from payload (%r), state unknown.",
+                self._attr_unique_id,
+                err,
+            )
+            new_value = None
         if self._ignore_zero_values and new_value == 0:
             _LOGGER.debug(
                 "Ignored new value of %s on %s.", new_value, self._attr_unique_id
