@@ -5,6 +5,7 @@ from awesomeversion.awesomeversion import AwesomeVersion
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import __version__ as HA_VERSION, CONF_DEVICE_ID  # noqa: N812
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import device_registry as dr
 
 from .const import (
     CONF_TIME_ZONE_ELECTRICITY,
@@ -52,3 +53,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     _LOGGER.debug("Finished setting up Hildebrand Glow IHD MQTT integration")
     return True
 
+
+async def async_remove_config_entry_device(
+    hass: HomeAssistant, config_entry: ConfigEntry, device_entry: dr.DeviceEntry
+) -> bool:
+    """Allow a Glow device to be deleted from the UI.
+
+    Devices are discovered from MQTT topics, so one that has been replaced or
+    is no longer publishing would otherwise be stuck in the device list. If the
+    device publishes again it is re-added after Home Assistant restarts.
+    """
+    return True
