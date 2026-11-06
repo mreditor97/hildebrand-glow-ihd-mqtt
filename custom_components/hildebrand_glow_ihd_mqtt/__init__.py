@@ -5,6 +5,7 @@ from awesomeversion.awesomeversion import AwesomeVersion
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import __version__ as HA_VERSION, CONF_DEVICE_ID  # noqa: N812
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import device_registry as dr
 
 from .const import (
     CONF_TIME_ZONE_ELECTRICITY,
@@ -13,6 +14,7 @@ from .const import (
     DEFAULT_TOPIC_PREFIX,
     DOMAIN,
     MIN_HA_VERSION,
+    entry_title,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -20,7 +22,7 @@ _LOGGER = logging.getLogger(__name__)
 PLATFORMS = ["sensor"]
 
 async def async_setup(hass: HomeAssistant, config: dict):
-    """Set up the Hildebrand Glow IHD MQTT integration."""
+    """Set up the Home Assistant Hildebrand Glow IHD Integration."""
 
     if AwesomeVersion(HA_VERSION) < AwesomeVersion(MIN_HA_VERSION):  # pragma: no cover
         msg = (
@@ -37,7 +39,14 @@ async def async_setup(hass: HomeAssistant, config: dict):
     return True
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
-    _LOGGER.debug("Setting up Hildebrand Glow IHD MQTT integration")
+    _LOGGER.debug("Setting up Home Assistant Hildebrand Glow IHD Integration")
+
+    if not entry.title:
+        # Entries created by earlier versions have a blank title, shown as
+        # "Created configuration for ." and an unnamed integration entry.
+        hass.config_entries.async_update_entry(
+            entry, title=entry_title(entry.data.get(CONF_DEVICE_ID))
+        )
 
     if entry.entry_id not in hass.data[DOMAIN]:
         hass.data[DOMAIN][entry.entry_id] = {}
@@ -49,6 +58,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    _LOGGER.debug("Finished setting up Hildebrand Glow IHD MQTT integration")
+    _LOGGER.debug("Finished setting up Home Assistant Hildebrand Glow IHD Integration")
     return True
 
+
+async def async_remove_config_entry_device(
+    hass: HomeAssistant, config_entry: ConfigEntry, device_entry: dr.DeviceEntry
+) -> bool:
+    """Allow a Glow device to be deleted from the UI.
+
+    Devices are discovered from MQTT topics, so one that has been replaced or
+    is no longer publishing would otherwise be stuck in the device list. If the
+    device publishes again it is re-added after Home Assistant restarts.
+    """
+    return True

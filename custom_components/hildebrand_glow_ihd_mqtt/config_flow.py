@@ -1,4 +1,4 @@
-"""Config flow for Hildebrand Glow IHD MQTT."""
+"""Config flow for the Home Assistant Hildebrand Glow IHD Integration."""
 import logging
 import voluptuous as vol
 import zoneinfo
@@ -23,6 +23,7 @@ from .const import (
     DEFAULT_DEVICE_ID,
     DEFAULT_TOPIC_PREFIX,
     DOMAIN,
+    entry_title,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -46,7 +47,7 @@ class HildebrandGlowIHDMQTTConfigFlow(ConfigFlow, domain=DOMAIN):
             self._abort_if_unique_id_configured()
 
             return self.async_create_entry(
-                title="",
+                title=entry_title(device_id),
                 data={
                     CONF_DEVICE_ID: device_id,
                     CONF_TOPIC_PREFIX: topic_prefix,

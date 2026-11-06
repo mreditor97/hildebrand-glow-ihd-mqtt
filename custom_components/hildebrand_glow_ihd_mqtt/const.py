@@ -22,6 +22,15 @@ CONF_TOPIC_PREFIX = "topic_prefix"
 
 DEFAULT_DEVICE_ID = "+"
 DEFAULT_TOPIC_PREFIX= "glow"
+DEFAULT_TITLE = "Hildebrand Glow IHD"
+
+
+def entry_title(device_id: str | None) -> str:
+    """Return the config entry title for a configured device ID."""
+    device_id = (device_id or "").strip()
+    if not device_id or device_id == DEFAULT_DEVICE_ID:
+        return DEFAULT_TITLE
+    return f"{DEFAULT_TITLE} ({device_id})"
 
 # Meter intervals
 class MeterInterval(Enum):
