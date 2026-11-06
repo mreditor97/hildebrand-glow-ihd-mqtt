@@ -1,42 +1,44 @@
 """Constants for the Home Assistant Hildebrand Glow IHD Integration."""
 
-from enum import Enum
+from enum import StrEnum
 from typing import Final
 
+from homeassistant.const import Platform
+
 DOMAIN: Final = "hildebrand_glow_ihd"
-MIN_HA_VERSION = "2024.12"
+# Keep in step with "homeassistant" in hacs.json
+MIN_HA_VERSION: Final = "2026.4.0"
 
-ATTR_NAME = "name"
-ATTR_ACTIVITY = "activity"
-ATTR_BATTERY_STATE = "battery_state"
-ATTR_RF_LINK_LEVEL = "rf_link_level"
-ATTR_RF_LINK_STATE = "rf_link_state"
-ATTR_SERIAL = "serial"
-ATTR_OPERATING_HOURS = "operating_hours"
-ATTR_LAST_ERROR = "last_error"
-ATTR_ERROR = "error"
-ATTR_STATE = "state"
+PLATFORMS: Final = [Platform.SENSOR]
 
-CONF_TIME_ZONE_ELECTRICITY = "time_zone_electricity"
-CONF_TIME_ZONE_GAS = "time_zone_gas"
-CONF_TOPIC_PREFIX = "topic_prefix"
+CONF_TIME_ZONE_ELECTRICITY: Final = "time_zone_electricity"
+CONF_TIME_ZONE_GAS: Final = "time_zone_gas"
+CONF_TOPIC_PREFIX: Final = "topic_prefix"
 
-DEFAULT_DEVICE_ID = "+"
-DEFAULT_TOPIC_PREFIX = "glow"
-DEFAULT_TITLE = "Hildebrand Glow IHD"
+DEFAULT_DEVICE_ID: Final = "+"
+DEFAULT_TOPIC_PREFIX: Final = "glow"
+DEFAULT_TITLE: Final = "Hildebrand Glow IHD"
+
+MANUFACTURER: Final = "Hildebrand Technology Limited"
+MODEL: Final = "Glow Smart Meter IHD"
+
+# The last part of each MQTT topic the Glow device publishes:
+#   <prefix>/<device id>/STATE
+#   <prefix>/<device id>/SENSOR/electricitymeter
+#   <prefix>/<device id>/SENSOR/gasmeter
+TOPIC_STATE: Final = "STATE"
+TOPIC_ELECTRICITY_METER: Final = "electricitymeter"
+TOPIC_GAS_METER: Final = "gasmeter"
+
+# The IHD reports this power value when it can't read the meter
+POWER_ERROR_VALUE: Final = -8388.608
+
+# Units the IHD uses for gas volume readings in cubic metres
+GAS_VOLUME_UNITS: Final = frozenset({"m3", "m³", "m^3"})
 
 
-def entry_title(device_id: str | None) -> str:
-    """Return the config entry title for a configured device ID."""
-    device_id = (device_id or "").strip()
-    if not device_id or device_id == DEFAULT_DEVICE_ID:
-        return DEFAULT_TITLE
-    return f"{DEFAULT_TITLE} ({device_id})"
-
-
-# Meter intervals
-class MeterInterval(Enum):
-    """Meter intervals."""
+class MeterInterval(StrEnum):
+    """Intervals that a meter's running totals reset on."""
 
     DAY = "day"
     WEEK = "week"

@@ -2,15 +2,13 @@
 
 from __future__ import annotations
 
-import logging
 import zoneinfo
 from typing import TYPE_CHECKING, Any
 
 import voluptuous as vol
 from homeassistant.config_entries import (
-    CONN_CLASS_LOCAL_PUSH,
     ConfigFlow,
-    OptionsFlow,
+    OptionsFlowWithReload,
 )
 from homeassistant.const import CONF_DEVICE_ID
 from homeassistant.core import callback
@@ -27,13 +25,54 @@ from .const import (
     DEFAULT_DEVICE_ID,
     DEFAULT_TOPIC_PREFIX,
     DOMAIN,
-    entry_title,
 )
+from .helpers import entry_title
+from .models import entry_settings
 
 if TYPE_CHECKING:
-    from homeassistant.config_entries import ConfigEntry, ConfigFlowResult
+    from collections.abc import Mapping
 
-_LOGGER = logging.getLogger(__name__)
+    from homeassistant.config_entries import ConfigEntry, ConfigFlowResult
+    from homeassistant.core import HomeAssistant
+
+
+async def _async_settings_schema(
+    hass: HomeAssistant,
+    defaults: Mapping[str, Any],
+) -> vol.Schema:
+    """Return the form schema shared by the config and options flows."""
+    # Listing the time zones reads the disk, so don't do it in the event loop
+    time_zones = await hass.async_add_executor_job(zoneinfo.available_timezones)
+    time_zone_selector = SelectSelector(
+        SelectSelectorConfig(
+            options=list(time_zones),
+            mode=SelectSelectorMode.DROPDOWN,
+            sort=True,
+        ),
+    )
+    return vol.Schema(
+        {
+            vol.Required(
+                CONF_DEVICE_ID,
+                default=defaults.get(CONF_DEVICE_ID, DEFAULT_DEVICE_ID),
+            ): str,
+            vol.Required(
+                CONF_TOPIC_PREFIX,
+                default=defaults.get(CONF_TOPIC_PREFIX, DEFAULT_TOPIC_PREFIX),
+            ): str,
+            vol.Required(
+                CONF_TIME_ZONE_ELECTRICITY,
+                default=defaults.get(
+                    CONF_TIME_ZONE_ELECTRICITY,
+                    hass.config.time_zone,
+                ),
+            ): time_zone_selector,
+            vol.Required(
+                CONF_TIME_ZONE_GAS,
+                default=defaults.get(CONF_TIME_ZONE_GAS, hass.config.time_zone),
+            ): time_zone_selector,
+        },
+    )
 
 
 class HildebrandGlowIHDMQTTConfigFlow(ConfigFlow, domain=DOMAIN):
@@ -41,68 +80,25 @@ class HildebrandGlowIHDMQTTConfigFlow(ConfigFlow, domain=DOMAIN):
 
     VERSION = 1
     MINOR_VERSION = 1
-    CONNECTION_CLASS = CONN_CLASS_LOCAL_PUSH
 
     async def async_step_user(
         self,
         user_input: dict[str, Any] | None = None,
     ) -> ConfigFlowResult:
         """Handle the initial step."""
-        errors = {}
-
         if user_input is not None:
-            device_id = user_input.get(CONF_DEVICE_ID)
-            topic_prefix = user_input.get(CONF_TOPIC_PREFIX)
-            time_zone_electricity = user_input.get(CONF_TIME_ZONE_ELECTRICITY)
-            time_zone_gas = user_input.get(CONF_TIME_ZONE_GAS)
-
+            device_id = user_input[CONF_DEVICE_ID]
+            # Existing entries use this unique ID, don't change it
             await self.async_set_unique_id(f"{DOMAIN}_{device_id}")
             self._abort_if_unique_id_configured()
-
             return self.async_create_entry(
                 title=entry_title(device_id),
-                data={
-                    CONF_DEVICE_ID: device_id,
-                    CONF_TOPIC_PREFIX: topic_prefix,
-                    CONF_TIME_ZONE_ELECTRICITY: time_zone_electricity,
-                    CONF_TIME_ZONE_GAS: time_zone_gas,
-                },
+                data=user_input,
             )
 
-        get_timezones: list[str] = list(
-            await self.hass.async_add_executor_job(
-                zoneinfo.available_timezones,
-            ),
-        )
         return self.async_show_form(
             step_id="user",
-            data_schema=vol.Schema(
-                {
-                    vol.Required(CONF_DEVICE_ID, default=DEFAULT_DEVICE_ID): str,
-                    vol.Required(CONF_TOPIC_PREFIX, default=DEFAULT_TOPIC_PREFIX): str,
-                    vol.Required(
-                        CONF_TIME_ZONE_ELECTRICITY,
-                        default=self.hass.config.time_zone,
-                    ): SelectSelector(
-                        SelectSelectorConfig(
-                            options=get_timezones,
-                            mode=SelectSelectorMode.DROPDOWN,
-                            sort=True,
-                        ),
-                    ),
-                    vol.Required(
-                        CONF_TIME_ZONE_GAS,
-                        default=self.hass.config.time_zone,
-                    ): SelectSelector(
-                        SelectSelectorConfig(
-                            options=get_timezones,
-                            mode=SelectSelectorMode.DROPDOWN,
-                            sort=True,
-                        ),
-                    ),
-                },
-            ),
-            errors=errors,
+            data_schema=await _async_settings_schema(self.hass, {}),
         )
 
     @staticmethod
@@ -114,8 +110,8 @@ class HildebrandGlowIHDMQTTConfigFlow(ConfigFlow, domain=DOMAIN):
         return HildebrandGlowIHDMQTTOptionsFlowHandler()
 
 
-class HildebrandGlowIHDMQTTOptionsFlowHandler(OptionsFlow):
-    """Handle a option flow for HildebrandGlowIHDMQTT."""
+class HildebrandGlowIHDMQTTOptionsFlowHandler(OptionsFlowWithReload):
+    """Change the settings of a Glow IHD, then reload it to apply them."""
 
     async def async_step_init(
         self,
@@ -123,55 +119,12 @@ class HildebrandGlowIHDMQTTOptionsFlowHandler(OptionsFlow):
     ) -> ConfigFlowResult:
         """Handle options flow."""
         if user_input is not None:
-            return self.async_create_entry(title="", data=user_input)
+            return self.async_create_entry(data=user_input)
 
-        get_timezones: list[str] = list(
-            await self.hass.async_add_executor_job(
-                zoneinfo.available_timezones,
+        return self.async_show_form(
+            step_id="init",
+            data_schema=await _async_settings_schema(
+                self.hass,
+                entry_settings(self.config_entry),
             ),
         )
-        data_schema = vol.Schema(
-            {
-                vol.Required(
-                    CONF_DEVICE_ID,
-                    default=self.config_entry.options.get(
-                        CONF_DEVICE_ID,
-                        DEFAULT_DEVICE_ID,
-                    ),
-                ): str,
-                vol.Required(
-                    CONF_TOPIC_PREFIX,
-                    default=self.config_entry.options.get(
-                        CONF_TOPIC_PREFIX,
-                        DEFAULT_TOPIC_PREFIX,
-                    ),
-                ): str,
-                vol.Required(
-                    CONF_TIME_ZONE_ELECTRICITY,
-                    default=self.config_entry.options.get(
-                        CONF_TIME_ZONE_ELECTRICITY,
-                        self.hass.config.time_zone,
-                    ),
-                ): SelectSelector(
-                    SelectSelectorConfig(
-                        options=get_timezones,
-                        mode=SelectSelectorMode.DROPDOWN,
-                        sort=True,
-                    ),
-                ),
-                vol.Required(
-                    CONF_TIME_ZONE_GAS,
-                    default=self.config_entry.options.get(
-                        CONF_TIME_ZONE_GAS,
-                        self.hass.config.time_zone,
-                    ),
-                ): SelectSelector(
-                    SelectSelectorConfig(
-                        options=get_timezones,
-                        mode=SelectSelectorMode.DROPDOWN,
-                        sort=True,
-                    ),
-                ),
-            },
-        )
-        return self.async_show_form(step_id="init", data_schema=data_schema)
