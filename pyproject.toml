@@ -5,9 +5,9 @@ description = "Home Assistant Hildebrand Glow IHD Integration"
 license = "MIT"
 license-files = ["LICENSE"]
 readme = { file = "README.md", content-type = "text/markdown" }
-requires-python = ">=3.13"
+requires-python = ">=3.14.2"
 # The integration itself runs inside Home Assistant, this project only holds
-# the development tools used by the pre-commit hooks and CI
+# the development and test tools used by the pre-commit hooks and CI
 dependencies = []
 
 [project.urls]
@@ -22,8 +22,13 @@ dev = [
   "black==26.10.1",
   "blacken-docs==1.20.0",
   "codespell==2.4.3",
+  "covdefaults==2.3.0",
+  "mypy==2.4.1",
   "pre-commit==4.7.0",
   "pre-commit-hooks==6.0.0",
+  # Pins the Home Assistant, pytest, pytest-asyncio and pytest-cov versions
+  # the tests run against
+  "pytest-homeassistant-custom-component==0.13.375",
   "ruff==0.17.4",
   "yamllint==1.38.0",
 ]
@@ -36,6 +41,45 @@ package = false
 # commitish is an input name of the Release Drafter action, hass is the
 # Home Assistant core object
 ignore-words-list = "commitish,hass"
+
+[tool.black]
+# requires-python is for the test tools. The integration itself must still run
+# on the Python of the oldest Home Assistant in hacs.json's range.
+target-version = ["py313"]
+
+[tool.coverage.run]
+plugins = ["covdefaults"]
+source = ["custom_components.hildebrand_glow_ihd"]
+
+[tool.coverage.report]
+fail_under = 90
+show_missing = true
+
+[tool.mypy]
+# The integration runs on Home Assistant's Python, the oldest of which in
+# hacs.json's range is 3.13
+python_version = "3.13"
+files = ["custom_components/hildebrand_glow_ihd", "tests"]
+plugins = []
+strict = true
+warn_unreachable = true
+
+[[tool.mypy.overrides]]
+# The pytest-homeassistant-custom-component helpers aren't fully typed
+module = "pytest_homeassistant_custom_component.*"
+follow_untyped_imports = true
+
+[[tool.mypy.overrides]]
+# Tests check states that change between asserts, which strict equality
+# reports as impossible comparisons
+module = "tests.*"
+strict_equality = false
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+addopts = "--cov --cov-report=term-missing --cov-report=xml"
+testpaths = ["tests"]
 
 [tool.ruff]
 target-version = "py313"
@@ -55,6 +99,13 @@ lint.ignore = [
   "EXE002", # Disabled for now
 ]
 lint.select = ["ALL"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = [
+  "S101", # Tests use assert
+  "PLR2004", # Tests compare against literal values
+  "SLF001", # Tests may read private members
+]
 
 [tool.ruff.lint.isort]
 known-first-party = ["custom_components.hildebrand_glow_ihd"]

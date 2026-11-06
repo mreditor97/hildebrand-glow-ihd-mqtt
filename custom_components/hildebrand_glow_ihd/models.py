@@ -13,7 +13,7 @@ from .const import (
     CONF_TIME_ZONE_GAS,
     CONF_TOPIC_PREFIX,
 )
-from .helpers import normalize_device_id, normalize_topic_prefix
+from .glow import normalize_device_id, normalize_topic_prefix
 
 if TYPE_CHECKING:
     from datetime import tzinfo

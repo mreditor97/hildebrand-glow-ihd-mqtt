@@ -22,10 +22,9 @@ from .const import (
     CONF_TIME_ZONE_ELECTRICITY,
     CONF_TIME_ZONE_GAS,
     CONF_TOPIC_PREFIX,
-    DEFAULT_DEVICE_ID,
-    DEFAULT_TOPIC_PREFIX,
     DOMAIN,
 )
+from .glow import DEFAULT_DEVICE_ID, DEFAULT_TOPIC_PREFIX
 from .helpers import entry_title
 from .models import entry_settings
 
@@ -40,7 +39,13 @@ async def _async_settings_schema(
     hass: HomeAssistant,
     defaults: Mapping[str, Any],
 ) -> vol.Schema:
-    """Return the form schema shared by the config and options flows."""
+    """Return the form schema shared by the config and options flows.
+
+    Home Assistant 2026.9 replaced voluptuous with probatio and installs
+    probatio under the voluptuous name, while 2026.4 to 2026.8 use voluptuous
+    itself. Importing voluptuous works on both, but mypy sees the real
+    voluptuous types, hence the type ignores where the schema is used.
+    """
     # Listing the time zones reads the disk, so don't do it in the event loop
     time_zones = await hass.async_add_executor_job(zoneinfo.available_timezones)
     time_zone_selector = SelectSelector(
@@ -98,7 +103,7 @@ class HildebrandGlowIHDMQTTConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="user",
-            data_schema=await _async_settings_schema(self.hass, {}),
+            data_schema=await _async_settings_schema(self.hass, {}),  # type: ignore[arg-type]
         )
 
     @staticmethod
@@ -123,7 +128,7 @@ class HildebrandGlowIHDMQTTOptionsFlowHandler(OptionsFlowWithReload):
 
         return self.async_show_form(
             step_id="init",
-            data_schema=await _async_settings_schema(
+            data_schema=await _async_settings_schema(  # type: ignore[arg-type]
                 self.hass,
                 entry_settings(self.config_entry),
             ),
