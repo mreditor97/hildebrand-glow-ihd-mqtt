@@ -22,7 +22,7 @@ _LOGGER = logging.getLogger(__name__)
 PLATFORMS = ["sensor"]
 
 async def async_setup(hass: HomeAssistant, config: dict):
-    """Set up the Hildebrand Glow IHD MQTT integration."""
+    """Set up the Home Assistant Hildebrand Glow IHD Integration."""
 
     if AwesomeVersion(HA_VERSION) < AwesomeVersion(MIN_HA_VERSION):  # pragma: no cover
         msg = (
@@ -39,7 +39,7 @@ async def async_setup(hass: HomeAssistant, config: dict):
     return True
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
-    _LOGGER.debug("Setting up Hildebrand Glow IHD MQTT integration")
+    _LOGGER.debug("Setting up Home Assistant Hildebrand Glow IHD Integration")
 
     if not entry.title:
         # Entries created by earlier versions have a blank title, shown as
@@ -58,7 +58,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    _LOGGER.debug("Finished setting up Hildebrand Glow IHD MQTT integration")
+    _LOGGER.debug("Finished setting up Home Assistant Hildebrand Glow IHD Integration")
     return True
 
 

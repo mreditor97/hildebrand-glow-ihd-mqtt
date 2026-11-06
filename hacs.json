@@ -1,5 +1,5 @@
 {
-    "name": "Hildebrand Glow IHD MQTT",
+    "name": "Home Assistant Hildebrand Glow IHD Integration",
     "render_readme": true,
     "domains": ["sensor"],
     "country": ["GB"],
