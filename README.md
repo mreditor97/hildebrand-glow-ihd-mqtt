@@ -29,12 +29,12 @@ The device publishes the readings from your SMETS1/SMETS2 smart meter to your MQ
 
 1. Open **Settings → Marketplace** and add this repository as a custom repository, with the type **Integration**:
    `https://github.com/mreditor97/integration-hildebrand-glow-ihd`
-2. Search for **Home Assistant Hildebrand Glow IHD Integration** and install it.
+2. Search for **Hildebrand Glow IHD Integration** and install it.
 3. Restart Home Assistant.
 
 ### Manual
 
-1. Copy `custom_components/hildebrand_glow_ihd_mqtt` from this repository into your Home Assistant config folder as `custom_components/hildebrand_glow_ihd`. The folder name must match the integration's domain, `hildebrand_glow_ihd`.
+1. Copy the `custom_components/hildebrand_glow_ihd` folder from this repository into your Home Assistant config folder's `custom_components` folder. The folder name must match the integration's domain, `hildebrand_glow_ihd`.
 2. Restart Home Assistant.
 
 ## Configuration
