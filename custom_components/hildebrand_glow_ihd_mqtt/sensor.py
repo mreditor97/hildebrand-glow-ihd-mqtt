@@ -63,6 +63,24 @@ def calculate_cost_today(meter_data: dict) -> float | None:
     )
 
 
+GAS_VOLUME_UNITS = {"m3", "m³", "m^3"}
+
+
+def gas_volume(js: dict, field: str, units_field: str) -> float | None:
+    """Return a gas volume reading only if the IHD reports it in cubic metres.
+
+    Some meters/IHDs populate the volume fields with the kWh figures and say
+    so in the accompanying units field (e.g. "dayweekmonthvolunits": "kWh").
+    Reporting those as m³ is wrong, and kWh can't be converted to m³ without
+    the calorific value, so report the state as unknown instead.
+    """
+    energy_import = js["gasmeter"]["energy"]["import"]
+    units = energy_import.get(units_field)
+    if units is not None and str(units).strip().lower() not in GAS_VOLUME_UNITS:
+        return None
+    return energy_import[field]
+
+
 STATE_SENSORS = [
     {
         "name": "Smart Meter IHD Software Version",
@@ -211,7 +229,7 @@ GAS_SENSORS = [
         "unit_of_measurement": UnitOfVolume.CUBIC_METERS,
         "state_class": SensorStateClass.TOTAL_INCREASING,
         "icon": "mdi:fire",
-        "func": lambda js: js["gasmeter"]["energy"]["import"]["cumulativevol"],
+        "func": lambda js: gas_volume(js, "cumulativevol", "cumulativevolunits"),
         "ignore_zero_values": True,
     },
     {
@@ -220,7 +238,7 @@ GAS_SENSORS = [
         "unit_of_measurement": UnitOfVolume.CUBIC_METERS,
         "state_class": SensorStateClass.TOTAL_INCREASING,
         "icon": "mdi:fire",
-        "func": lambda js: js["gasmeter"]["energy"]["import"]["dayvol"],
+        "func": lambda js: gas_volume(js, "dayvol", "dayweekmonthvolunits"),
     },
     {
         "name": "Smart Meter Gas: Import Vol (This week)",
@@ -228,7 +246,7 @@ GAS_SENSORS = [
         "unit_of_measurement": UnitOfVolume.CUBIC_METERS,
         "state_class": SensorStateClass.TOTAL_INCREASING,
         "icon": "mdi:fire",
-        "func": lambda js: js["gasmeter"]["energy"]["import"]["weekvol"],
+        "func": lambda js: gas_volume(js, "weekvol", "dayweekmonthvolunits"),
     },
     {
         "name": "Smart Meter Gas: Import Vol (This month)",
@@ -236,7 +254,7 @@ GAS_SENSORS = [
         "unit_of_measurement": UnitOfVolume.CUBIC_METERS,
         "state_class": SensorStateClass.TOTAL_INCREASING,
         "icon": "mdi:fire",
-        "func": lambda js: js["gasmeter"]["energy"]["import"]["monthvol"],
+        "func": lambda js: gas_volume(js, "monthvol", "dayweekmonthvolunits"),
     },
     {
         "name": "Smart Meter Gas: Import (Today)",
