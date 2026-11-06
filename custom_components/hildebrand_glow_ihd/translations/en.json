@@ -44,79 +44,79 @@
   "entity": {
     "sensor": {
       "software_version": {
-        "name": "Smart Meter IHD Software Version"
+        "name": "IHD Software Version"
       },
       "hardware": {
-        "name": "Smart Meter IHD Hardware"
+        "name": "IHD Hardware"
       },
       "han_status": {
-        "name": "Smart Meter IHD HAN Status"
+        "name": "IHD HAN Status"
       },
       "han_rssi": {
-        "name": "Smart Meter IHD HAN RSSI"
+        "name": "IHD HAN RSSI"
       },
       "han_lqi": {
-        "name": "Smart Meter IHD HAN LQI"
+        "name": "IHD HAN LQI"
       },
       "electricity_export": {
-        "name": "Smart Meter Electricity: Export"
+        "name": "Electricity: Export"
       },
       "electricity_import": {
-        "name": "Smart Meter Electricity: Import"
+        "name": "Electricity: Import"
       },
       "electricity_import_today": {
-        "name": "Smart Meter Electricity: Import (Today)"
+        "name": "Electricity: Import (Today)"
       },
       "electricity_import_week": {
-        "name": "Smart Meter Electricity: Import (This week)"
+        "name": "Electricity: Import (This week)"
       },
       "electricity_import_month": {
-        "name": "Smart Meter Electricity: Import (This month)"
+        "name": "Electricity: Import (This month)"
       },
       "electricity_unit_rate": {
-        "name": "Smart Meter Electricity: Import Unit Rate"
+        "name": "Electricity: Import Unit Rate"
       },
       "electricity_standing_charge": {
-        "name": "Smart Meter Electricity: Import Standing Charge"
+        "name": "Electricity: Import Standing Charge"
       },
       "electricity_power": {
-        "name": "Smart Meter Electricity: Power"
+        "name": "Electricity: Power"
       },
       "electricity_cost_today": {
-        "name": "Smart Meter Electricity: Cost (Today)"
+        "name": "Electricity: Cost (Today)"
       },
       "gas_import": {
-        "name": "Smart Meter Gas: Import"
+        "name": "Gas: Import"
       },
       "gas_import_volume": {
-        "name": "Smart Meter Gas: Import Vol"
+        "name": "Gas: Import Vol"
       },
       "gas_import_volume_today": {
-        "name": "Smart Meter Gas: Import Vol (Today)"
+        "name": "Gas: Import Vol (Today)"
       },
       "gas_import_volume_week": {
-        "name": "Smart Meter Gas: Import Vol (This week)"
+        "name": "Gas: Import Vol (This week)"
       },
       "gas_import_volume_month": {
-        "name": "Smart Meter Gas: Import Vol (This month)"
+        "name": "Gas: Import Vol (This month)"
       },
       "gas_import_today": {
-        "name": "Smart Meter Gas: Import (Today)"
+        "name": "Gas: Import (Today)"
       },
       "gas_import_week": {
-        "name": "Smart Meter Gas: Import (This week)"
+        "name": "Gas: Import (This week)"
       },
       "gas_import_month": {
-        "name": "Smart Meter Gas: Import (This month)"
+        "name": "Gas: Import (This month)"
       },
       "gas_unit_rate": {
-        "name": "Smart Meter Gas: Import Unit Rate"
+        "name": "Gas: Import Unit Rate"
       },
       "gas_standing_charge": {
-        "name": "Smart Meter Gas: Import Standing Charge"
+        "name": "Gas: Import Standing Charge"
       },
       "gas_cost_today": {
-        "name": "Smart Meter Gas: Cost (Today)"
+        "name": "Gas: Cost (Today)"
       }
     }
   }
