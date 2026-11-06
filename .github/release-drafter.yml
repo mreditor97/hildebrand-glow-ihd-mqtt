@@ -1,0 +1,73 @@
+---
+name-template: 'v$RESOLVED_VERSION'
+tag-template: '$RESOLVED_VERSION'
+change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
+sort-direction: ascending
+
+categories:
+  # Changelog sections
+  - title: '🚨 Breaking changes'
+    when:
+      labels:
+        - 'breaking-change'
+  - title: '✨ New features'
+    when:
+      labels:
+        - 'new-feature'
+  - title: '🐛 Bug fixes'
+    when:
+      labels:
+        - 'bugfix'
+  - title: '🚀 Enhancements'
+    when:
+      labels:
+        - 'enhancement'
+        - 'refactor'
+        - 'performance'
+  - title: '🧰 Maintenance'
+    when:
+      labels:
+        - 'maintenance'
+        - 'ci'
+  - title: '📚 Documentation'
+    when:
+      labels:
+        - 'documentation'
+  - title: '⬆️ Dependency updates'
+    when:
+      labels:
+        - 'dependencies'
+
+  # Next version: the highest matching increment wins
+  - type: 'version-resolver'
+    semver-increment: 'major'
+    when:
+      labels:
+        - 'major'
+        - 'breaking-change'
+  - type: 'version-resolver'
+    semver-increment: 'minor'
+    when:
+      labels:
+        - 'minor'
+        - 'new-feature'
+  - type: 'version-resolver'
+    semver-increment: 'patch'
+    when:
+      labels:
+        - 'bugfix'
+        - 'chore'
+        - 'ci'
+        - 'dependencies'
+        - 'documentation'
+        - 'enhancement'
+        - 'performance'
+        - 'refactor'
+  # Fallback when nothing above matches
+  - type: 'version-resolver'
+    semver-increment: 'patch'
+
+template: |
+  ## What’s changed
+
+  $CHANGES

@@ -1,0 +1,13 @@
+{
+  "name": "integration-hildebrand-glow-ihd",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Home Assistant Hildebrand Glow IHD Integration",
+  "scripts": {
+    "prettier": "prettier --write \"**/*.{json,js,md,yml,yaml}\""
+  },
+  "author": "MrEditor97 <dev@mreditor97.co.uk>",
+  "devDependencies": {
+    "prettier": "3.9.10"
+  }
+}
