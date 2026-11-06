@@ -54,7 +54,7 @@ To change these settings later, open the integration and select **Configure**. T
 
 ## Sensors
 
-Entity IDs come from the sensor names, e.g. `sensor.smart_meter_electricity_import_today`.
+Each sensor's name starts with its device's name, so new entity IDs look like `sensor.glow_smart_meter_aabbccddeeff_smart_meter_electricity_import_today`. Existing entity IDs aren't changed.
 
 ### Electricity
 

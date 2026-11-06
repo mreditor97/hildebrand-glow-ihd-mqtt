@@ -40,5 +40,84 @@
     "mqtt_not_available": {
       "message": "The MQTT integration is not available. Set up MQTT, then try again."
     }
+  },
+  "entity": {
+    "sensor": {
+      "software_version": {
+        "name": "Smart Meter IHD Software Version"
+      },
+      "hardware": {
+        "name": "Smart Meter IHD Hardware"
+      },
+      "han_status": {
+        "name": "Smart Meter IHD HAN Status"
+      },
+      "han_rssi": {
+        "name": "Smart Meter IHD HAN RSSI"
+      },
+      "han_lqi": {
+        "name": "Smart Meter IHD HAN LQI"
+      },
+      "electricity_export": {
+        "name": "Smart Meter Electricity: Export"
+      },
+      "electricity_import": {
+        "name": "Smart Meter Electricity: Import"
+      },
+      "electricity_import_today": {
+        "name": "Smart Meter Electricity: Import (Today)"
+      },
+      "electricity_import_week": {
+        "name": "Smart Meter Electricity: Import (This week)"
+      },
+      "electricity_import_month": {
+        "name": "Smart Meter Electricity: Import (This month)"
+      },
+      "electricity_unit_rate": {
+        "name": "Smart Meter Electricity: Import Unit Rate"
+      },
+      "electricity_standing_charge": {
+        "name": "Smart Meter Electricity: Import Standing Charge"
+      },
+      "electricity_power": {
+        "name": "Smart Meter Electricity: Power"
+      },
+      "electricity_cost_today": {
+        "name": "Smart Meter Electricity: Cost (Today)"
+      },
+      "gas_import": {
+        "name": "Smart Meter Gas: Import"
+      },
+      "gas_import_volume": {
+        "name": "Smart Meter Gas: Import Vol"
+      },
+      "gas_import_volume_today": {
+        "name": "Smart Meter Gas: Import Vol (Today)"
+      },
+      "gas_import_volume_week": {
+        "name": "Smart Meter Gas: Import Vol (This week)"
+      },
+      "gas_import_volume_month": {
+        "name": "Smart Meter Gas: Import Vol (This month)"
+      },
+      "gas_import_today": {
+        "name": "Smart Meter Gas: Import (Today)"
+      },
+      "gas_import_week": {
+        "name": "Smart Meter Gas: Import (This week)"
+      },
+      "gas_import_month": {
+        "name": "Smart Meter Gas: Import (This month)"
+      },
+      "gas_unit_rate": {
+        "name": "Smart Meter Gas: Import Unit Rate"
+      },
+      "gas_standing_charge": {
+        "name": "Smart Meter Gas: Import Standing Charge"
+      },
+      "gas_cost_today": {
+        "name": "Smart Meter Gas: Cost (Today)"
+      }
+    }
   }
 }
