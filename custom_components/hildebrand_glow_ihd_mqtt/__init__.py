@@ -14,6 +14,7 @@ from .const import (
     DEFAULT_TOPIC_PREFIX,
     DOMAIN,
     MIN_HA_VERSION,
+    entry_title,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -39,6 +40,13 @@ async def async_setup(hass: HomeAssistant, config: dict):
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     _LOGGER.debug("Setting up Hildebrand Glow IHD MQTT integration")
+
+    if not entry.title:
+        # Entries created by earlier versions have a blank title, shown as
+        # "Created configuration for ." and an unnamed integration entry.
+        hass.config_entries.async_update_entry(
+            entry, title=entry_title(entry.data.get(CONF_DEVICE_ID))
+        )
 
     if entry.entry_id not in hass.data[DOMAIN]:
         hass.data[DOMAIN][entry.entry_id] = {}
