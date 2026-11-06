@@ -54,31 +54,31 @@ To change these settings later, open the integration and select **Configure**. T
 
 ## Sensors
 
-Entity IDs come from the sensor names, e.g. `sensor.smart_meter_electricity_import_today`.
+Home Assistant shows each sensor after its device's name, e.g. **Glow Smart Meter AABBCCDDEEFF Electricity: Import (Today)**, and new entity IDs look like `sensor.glow_smart_meter_aabbccddeeff_electricity_import_today`. Entity IDs of sensors you already have aren't changed.
 
 ### Electricity
 
-| Sensor                                                           | Unit    | Notes                                       |
-| ---------------------------------------------------------------- | ------- | ------------------------------------------- |
-| Smart Meter Electricity: Import                                  | kWh     | Lifetime meter reading                      |
-| Smart Meter Electricity: Import (Today / This week / This month) | kWh     | Reset by the meter                          |
-| Smart Meter Electricity: Export                                  | kWh     | Lifetime export reading                     |
-| Smart Meter Electricity: Power                                   | kW      | Current demand                              |
-| Smart Meter Electricity: Import Unit Rate                        | GBP/kWh | Current unit rate                           |
-| Smart Meter Electricity: Import Standing Charge                  | GBP     | Daily standing charge                       |
-| Smart Meter Electricity: Cost (Today)                            | GBP     | Standing charge + today's usage × unit rate |
+| Sensor                                               | Unit    | Notes                                       |
+| ---------------------------------------------------- | ------- | ------------------------------------------- |
+| Electricity: Import                                  | kWh     | Lifetime meter reading                      |
+| Electricity: Import (Today / This week / This month) | kWh     | Reset by the meter                          |
+| Electricity: Export                                  | kWh     | Lifetime export reading                     |
+| Electricity: Power                                   | kW      | Current demand                              |
+| Electricity: Import Unit Rate                        | GBP/kWh | Current unit rate                           |
+| Electricity: Import Standing Charge                  | GBP     | Daily standing charge                       |
+| Electricity: Cost (Today)                            | GBP     | Standing charge + today's usage × unit rate |
 
 ### Gas
 
-| Sensor                                                       | Unit    | Notes                                       |
-| ------------------------------------------------------------ | ------- | ------------------------------------------- |
-| Smart Meter Gas: Import                                      | kWh     | Lifetime meter reading                      |
-| Smart Meter Gas: Import (Today / This week / This month)     | kWh     | Reset by the meter                          |
-| Smart Meter Gas: Import Vol                                  | m³      | Lifetime volume reading                     |
-| Smart Meter Gas: Import Vol (Today / This week / This month) | m³      | Reset by the meter                          |
-| Smart Meter Gas: Import Unit Rate                            | GBP/kWh | Current unit rate                           |
-| Smart Meter Gas: Import Standing Charge                      | GBP     | Daily standing charge                       |
-| Smart Meter Gas: Cost (Today)                                | GBP     | Standing charge + today's usage × unit rate |
+| Sensor                                           | Unit    | Notes                                       |
+| ------------------------------------------------ | ------- | ------------------------------------------- |
+| Gas: Import                                      | kWh     | Lifetime meter reading                      |
+| Gas: Import (Today / This week / This month)     | kWh     | Reset by the meter                          |
+| Gas: Import Vol                                  | m³      | Lifetime volume reading                     |
+| Gas: Import Vol (Today / This week / This month) | m³      | Reset by the meter                          |
+| Gas: Import Unit Rate                            | GBP/kWh | Current unit rate                           |
+| Gas: Import Standing Charge                      | GBP     | Daily standing charge                       |
+| Gas: Cost (Today)                                | GBP     | Standing charge + today's usage × unit rate |
 
 There is no live gas power sensor: the IHD stopped publishing gas power in software update 1.8.13 (June 2022).
 
@@ -90,9 +90,9 @@ IHD software version, hardware, HAN (Zigbee) status, HAN RSSI and HAN LQI.
 
 In **Settings → Dashboards → Energy**:
 
-- **Electricity grid consumption:** `Smart Meter Electricity: Import`
-- **Return to grid:** `Smart Meter Electricity: Export` (if you export)
-- **Gas consumption:** `Smart Meter Gas: Import` (kWh) or `Smart Meter Gas: Import Vol` (m³)
+- **Electricity grid consumption:** `Electricity: Import`
+- **Return to grid:** `Electricity: Export` (if you export)
+- **Gas consumption:** `Gas: Import` (kWh) or `Gas: Import Vol` (m³)
 - **Cost:** choose _Use an entity with current price_ and pick the matching **Import Unit Rate** sensor.
 
 The lifetime **Import** sensors give the most reliable statistics. The _Today_ sensors and _Cost (Today)_ reset every day, so a reset at an unexpected time can show up as a spike or a negative value.

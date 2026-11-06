@@ -1,0 +1,81 @@
+{
+  "entity": {
+    "sensor": {
+      "software_version": {
+        "default": "mdi:information-outline"
+      },
+      "hardware": {
+        "default": "mdi:information-outline"
+      },
+      "han_status": {
+        "default": "mdi:information-outline"
+      },
+      "han_rssi": {
+        "default": "mdi:wifi-strength-outline"
+      },
+      "han_lqi": {
+        "default": "mdi:wifi-strength-outline"
+      },
+      "electricity_export": {
+        "default": "mdi:flash"
+      },
+      "electricity_import": {
+        "default": "mdi:flash"
+      },
+      "electricity_import_today": {
+        "default": "mdi:flash"
+      },
+      "electricity_import_week": {
+        "default": "mdi:flash"
+      },
+      "electricity_import_month": {
+        "default": "mdi:flash"
+      },
+      "electricity_unit_rate": {
+        "default": "mdi:cash"
+      },
+      "electricity_standing_charge": {
+        "default": "mdi:cash"
+      },
+      "electricity_power": {
+        "default": "mdi:flash"
+      },
+      "electricity_cost_today": {
+        "default": "mdi:cash"
+      },
+      "gas_import": {
+        "default": "mdi:fire"
+      },
+      "gas_import_volume": {
+        "default": "mdi:fire"
+      },
+      "gas_import_volume_today": {
+        "default": "mdi:fire"
+      },
+      "gas_import_volume_week": {
+        "default": "mdi:fire"
+      },
+      "gas_import_volume_month": {
+        "default": "mdi:fire"
+      },
+      "gas_import_today": {
+        "default": "mdi:fire"
+      },
+      "gas_import_week": {
+        "default": "mdi:fire"
+      },
+      "gas_import_month": {
+        "default": "mdi:fire"
+      },
+      "gas_unit_rate": {
+        "default": "mdi:cash"
+      },
+      "gas_standing_charge": {
+        "default": "mdi:cash"
+      },
+      "gas_cost_today": {
+        "default": "mdi:cash"
+      }
+    }
+  }
+}

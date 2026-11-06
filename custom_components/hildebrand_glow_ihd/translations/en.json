@@ -40,5 +40,84 @@
     "mqtt_not_available": {
       "message": "The MQTT integration is not available. Set up MQTT, then try again."
     }
+  },
+  "entity": {
+    "sensor": {
+      "software_version": {
+        "name": "IHD Software Version"
+      },
+      "hardware": {
+        "name": "IHD Hardware"
+      },
+      "han_status": {
+        "name": "IHD HAN Status"
+      },
+      "han_rssi": {
+        "name": "IHD HAN RSSI"
+      },
+      "han_lqi": {
+        "name": "IHD HAN LQI"
+      },
+      "electricity_export": {
+        "name": "Electricity: Export"
+      },
+      "electricity_import": {
+        "name": "Electricity: Import"
+      },
+      "electricity_import_today": {
+        "name": "Electricity: Import (Today)"
+      },
+      "electricity_import_week": {
+        "name": "Electricity: Import (This week)"
+      },
+      "electricity_import_month": {
+        "name": "Electricity: Import (This month)"
+      },
+      "electricity_unit_rate": {
+        "name": "Electricity: Import Unit Rate"
+      },
+      "electricity_standing_charge": {
+        "name": "Electricity: Import Standing Charge"
+      },
+      "electricity_power": {
+        "name": "Electricity: Power"
+      },
+      "electricity_cost_today": {
+        "name": "Electricity: Cost (Today)"
+      },
+      "gas_import": {
+        "name": "Gas: Import"
+      },
+      "gas_import_volume": {
+        "name": "Gas: Import Vol"
+      },
+      "gas_import_volume_today": {
+        "name": "Gas: Import Vol (Today)"
+      },
+      "gas_import_volume_week": {
+        "name": "Gas: Import Vol (This week)"
+      },
+      "gas_import_volume_month": {
+        "name": "Gas: Import Vol (This month)"
+      },
+      "gas_import_today": {
+        "name": "Gas: Import (Today)"
+      },
+      "gas_import_week": {
+        "name": "Gas: Import (This week)"
+      },
+      "gas_import_month": {
+        "name": "Gas: Import (This month)"
+      },
+      "gas_unit_rate": {
+        "name": "Gas: Import Unit Rate"
+      },
+      "gas_standing_charge": {
+        "name": "Gas: Import Standing Charge"
+      },
+      "gas_cost_today": {
+        "name": "Gas: Cost (Today)"
+      }
+    }
   }
 }

@@ -18,15 +18,22 @@ if TYPE_CHECKING:
 class GlowEntity(Entity):
     """An entity of a Glow device, updated from its MQTT messages."""
 
+    _attr_has_entity_name = True
     _attr_should_poll = False
 
-    def __init__(self, device_id: str, description: EntityDescription) -> None:
+    def __init__(
+        self,
+        device_id: str,
+        description: EntityDescription,
+        unique_id_name: str,
+    ) -> None:
         """Initialise the entity."""
         self.entity_description = description
         self._device_id = device_id
         self._added = False
-        # Existing installs rely on this unique ID, don't change it
-        self._attr_unique_id = slugify(f"{device_id}_{description.name}")
+        # Existing installs rely on this unique ID, don't change it. It is
+        # made from the sensor's name from before names were translated.
+        self._attr_unique_id = slugify(f"{device_id}_{unique_id_name}")
         self._attr_device_info = DeviceInfo(
             connections={(CONNECTION_NETWORK_MAC, device_id)},
             manufacturer=MANUFACTURER,
