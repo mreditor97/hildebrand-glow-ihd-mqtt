@@ -25,12 +25,16 @@ The device publishes the readings from your SMETS1/SMETS2 smart meter to your MQ
 
 ## Installation
 
-### HACS (recommended)
+### Home Assistant Marketplace (recommended)
 
-1. In HACS, open the menu and choose **Custom repositories** ([how-to](https://hacs.xyz/docs/faq/custom_repositories)).
-2. Add `https://github.com/mreditor97/Hildebrand-Glow-IHD-MQTT` with the category **Integration**.
-3. Search for **Hildebrand Glow IHD MQTT** and install it.
-4. Restart Home Assistant.
+Home Assistant 2026.11 replaced HACS with the built-in **Marketplace**, under **Settings**. It uses the same catalog and custom repositories as HACS.
+
+1. Open **Settings → Marketplace** and add this repository as a custom repository, with the type **Integration**:
+   `https://github.com/mreditor97/hildebrand-glow-ihd-mqtt`
+2. Search for **Hildebrand Glow IHD MQTT** and install it.
+3. Restart Home Assistant.
+
+On Home Assistant versions before 2026.11, follow the same steps in HACS.
 
 ### Manual
 
