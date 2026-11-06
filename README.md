@@ -50,7 +50,7 @@ Go to **Settings → Devices & services → Add integration** and search for **H
 
 Each Glow device appears as a device named **Glow Smart Meter &lt;device id&gt;**, and its sensors appear as soon as the first MQTT message arrives.
 
-> **Note:** Changes made with **Configure** are currently not applied. To change these settings, delete the integration and add it again.
+To change these settings later, open the integration and select **Configure**. The integration reloads to apply them.
 
 ## Sensors
 
