@@ -1,11 +1,13 @@
-"""The hildebrand_glow_ihd_mqtt component."""
+"""The Home Assistant Hildebrand Glow IHD Integration."""
+
+from __future__ import annotations
+
 import logging
+from typing import TYPE_CHECKING, Any
 
 from awesomeversion.awesomeversion import AwesomeVersion
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import __version__ as HA_VERSION, CONF_DEVICE_ID  # noqa: N812
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from homeassistant.const import CONF_DEVICE_ID
+from homeassistant.const import __version__ as HA_VERSION  # noqa: N812
 
 from .const import (
     CONF_TIME_ZONE_ELECTRICITY,
@@ -17,13 +19,21 @@ from .const import (
     entry_title,
 )
 
+if TYPE_CHECKING:
+    from homeassistant.config_entries import ConfigEntry
+    from homeassistant.core import HomeAssistant
+    from homeassistant.helpers import device_registry as dr
+
 _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS = ["sensor"]
 
-async def async_setup(hass: HomeAssistant, config: dict):
-    """Set up the Home Assistant Hildebrand Glow IHD Integration."""
 
+async def async_setup(
+    hass: HomeAssistant,
+    config: dict[str, Any],  # noqa: ARG001
+) -> bool:
+    """Set up the Home Assistant Hildebrand Glow IHD Integration."""
     if AwesomeVersion(HA_VERSION) < AwesomeVersion(MIN_HA_VERSION):  # pragma: no cover
         msg = (
             "This integration requires at least HomeAssistant version "
@@ -38,23 +48,37 @@ async def async_setup(hass: HomeAssistant, config: dict):
 
     return True
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
+
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Set up a Glow IHD from a config entry."""
     _LOGGER.debug("Setting up Home Assistant Hildebrand Glow IHD Integration")
 
     if not entry.title:
         # Entries created by earlier versions have a blank title, shown as
         # "Created configuration for ." and an unnamed integration entry.
         hass.config_entries.async_update_entry(
-            entry, title=entry_title(entry.data.get(CONF_DEVICE_ID))
+            entry,
+            title=entry_title(entry.data.get(CONF_DEVICE_ID)),
         )
 
     if entry.entry_id not in hass.data[DOMAIN]:
         hass.data[DOMAIN][entry.entry_id] = {}
 
-    hass.data[DOMAIN][entry.entry_id][CONF_DEVICE_ID] = entry.data[CONF_DEVICE_ID].strip().upper().replace(":", "").replace(" ", "")
-    hass.data[DOMAIN][entry.entry_id][CONF_TOPIC_PREFIX] = entry.data.get(CONF_TOPIC_PREFIX, DEFAULT_TOPIC_PREFIX).strip().replace("#", "").replace(" ", "")
-    hass.data[DOMAIN][entry.entry_id][CONF_TIME_ZONE_ELECTRICITY] = entry.data.get(CONF_TIME_ZONE_ELECTRICITY)
-    hass.data[DOMAIN][entry.entry_id][CONF_TIME_ZONE_GAS] = entry.data.get(CONF_TIME_ZONE_GAS)
+    hass.data[DOMAIN][entry.entry_id][CONF_DEVICE_ID] = (
+        entry.data[CONF_DEVICE_ID].strip().upper().replace(":", "").replace(" ", "")
+    )
+    hass.data[DOMAIN][entry.entry_id][CONF_TOPIC_PREFIX] = (
+        entry.data.get(CONF_TOPIC_PREFIX, DEFAULT_TOPIC_PREFIX)
+        .strip()
+        .replace("#", "")
+        .replace(" ", "")
+    )
+    hass.data[DOMAIN][entry.entry_id][CONF_TIME_ZONE_ELECTRICITY] = entry.data.get(
+        CONF_TIME_ZONE_ELECTRICITY,
+    )
+    hass.data[DOMAIN][entry.entry_id][CONF_TIME_ZONE_GAS] = entry.data.get(
+        CONF_TIME_ZONE_GAS,
+    )
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
@@ -63,7 +87,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 
 
 async def async_remove_config_entry_device(
-    hass: HomeAssistant, config_entry: ConfigEntry, device_entry: dr.DeviceEntry
+    hass: HomeAssistant,  # noqa: ARG001
+    config_entry: ConfigEntry,  # noqa: ARG001
+    device_entry: dr.DeviceEntry,  # noqa: ARG001
 ) -> bool:
     """Allow a Glow device to be deleted from the UI.
 
