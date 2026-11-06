@@ -1,11 +1,11 @@
 {
   "domain": "hildebrand_glow_ihd",
   "name": "Home Assistant Hildebrand Glow IHD Integration",
-  "documentation": "https://github.com/mreditor97/integration-hildebrand-glow-ihd",
-  "issue_tracker": "https://github.com/mreditor97/integration-hildebrand-glow-ihd/issues",
   "codeowners": ["@megakid"],
-  "dependencies": ["mqtt"],
-  "iot_class": "local_push",
   "config_flow": true,
+  "dependencies": ["mqtt"],
+  "documentation": "https://github.com/mreditor97/integration-hildebrand-glow-ihd",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/mreditor97/integration-hildebrand-glow-ihd/issues",
   "version": "1.9.1"
 }
