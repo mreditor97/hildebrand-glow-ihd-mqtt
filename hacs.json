@@ -1,5 +1,5 @@
 {
-  "name": "Home Assistant Hildebrand Glow IHD Integration",
+  "name": "Hildebrand Glow IHD Integration",
   "render_readme": true,
   "country": ["GB"],
   "homeassistant": "2026.4.0"
