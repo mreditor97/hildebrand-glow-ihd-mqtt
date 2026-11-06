@@ -39,7 +39,7 @@ The device publishes the readings from your SMETS1/SMETS2 smart meter to your MQ
 
 ## Configuration
 
-Go to **Settings → Devices & services → Add integration** and search for **Home Assistant Hildebrand Glow IHD Integration**.
+Go to **Settings → Devices & services → Add integration** and search for **Hildebrand Glow IHD Integration**.
 
 | Option                      | Default           | Description                                                                                                                                                                                                          |
 | --------------------------- | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
