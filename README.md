@@ -41,12 +41,12 @@ The device publishes the readings from your SMETS1/SMETS2 smart meter to your MQ
 
 Go to **Settings → Devices & services → Add integration** and search for **Home Assistant Hildebrand Glow IHD Integration**.
 
-| Option | Default | Description |
-| --- | --- | --- |
-| Device ID | `+` | Leave as `+` to detect every Glow device publishing to your broker (recommended). To limit it to one device, enter that device's ID: the part of the topic after the prefix, e.g. `glow/`**`AABBCCDDEEFF`**`/STATE`. |
-| Topic prefix | `glow` | The first part of the MQTT topic. Only change this if you changed it on the device. |
-| Electricity meter time zone | Your HA time zone | The time zone your electricity meter's daily total resets in. |
-| Gas meter time zone | Your HA time zone | The time zone your gas meter's daily total resets in. Some gas meters reset at midnight UTC (01:00 during British Summer Time). If yours does, choose `UTC`. |
+| Option                      | Default           | Description                                                                                                                                                                                                          |
+| --------------------------- | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Device ID                   | `+`               | Leave as `+` to detect every Glow device publishing to your broker (recommended). To limit it to one device, enter that device's ID: the part of the topic after the prefix, e.g. `glow/`**`AABBCCDDEEFF`**`/STATE`. |
+| Topic prefix                | `glow`            | The first part of the MQTT topic. Only change this if you changed it on the device.                                                                                                                                  |
+| Electricity meter time zone | Your HA time zone | The time zone your electricity meter's daily total resets in.                                                                                                                                                        |
+| Gas meter time zone         | Your HA time zone | The time zone your gas meter's daily total resets in. Some gas meters reset at midnight UTC (01:00 during British Summer Time). If yours does, choose `UTC`.                                                         |
 
 Each Glow device appears as a device named **Glow Smart Meter &lt;device id&gt;**, and its sensors appear as soon as the first MQTT message arrives.
 
@@ -58,27 +58,27 @@ Entity IDs come from the sensor names, e.g. `sensor.smart_meter_electricity_impo
 
 ### Electricity
 
-| Sensor | Unit | Notes |
-| --- | --- | --- |
-| Smart Meter Electricity: Import | kWh | Lifetime meter reading |
-| Smart Meter Electricity: Import (Today / This week / This month) | kWh | Reset by the meter |
-| Smart Meter Electricity: Export | kWh | Lifetime export reading |
-| Smart Meter Electricity: Power | kW | Current demand |
-| Smart Meter Electricity: Import Unit Rate | GBP/kWh | Current unit rate |
-| Smart Meter Electricity: Import Standing Charge | GBP | Daily standing charge |
-| Smart Meter Electricity: Cost (Today) | GBP | Standing charge + today's usage × unit rate |
+| Sensor                                                           | Unit    | Notes                                       |
+| ---------------------------------------------------------------- | ------- | ------------------------------------------- |
+| Smart Meter Electricity: Import                                  | kWh     | Lifetime meter reading                      |
+| Smart Meter Electricity: Import (Today / This week / This month) | kWh     | Reset by the meter                          |
+| Smart Meter Electricity: Export                                  | kWh     | Lifetime export reading                     |
+| Smart Meter Electricity: Power                                   | kW      | Current demand                              |
+| Smart Meter Electricity: Import Unit Rate                        | GBP/kWh | Current unit rate                           |
+| Smart Meter Electricity: Import Standing Charge                  | GBP     | Daily standing charge                       |
+| Smart Meter Electricity: Cost (Today)                            | GBP     | Standing charge + today's usage × unit rate |
 
 ### Gas
 
-| Sensor | Unit | Notes |
-| --- | --- | --- |
-| Smart Meter Gas: Import | kWh | Lifetime meter reading |
-| Smart Meter Gas: Import (Today / This week / This month) | kWh | Reset by the meter |
-| Smart Meter Gas: Import Vol | m³ | Lifetime volume reading |
-| Smart Meter Gas: Import Vol (Today / This week / This month) | m³ | Reset by the meter |
-| Smart Meter Gas: Import Unit Rate | GBP/kWh | Current unit rate |
-| Smart Meter Gas: Import Standing Charge | GBP | Daily standing charge |
-| Smart Meter Gas: Cost (Today) | GBP | Standing charge + today's usage × unit rate |
+| Sensor                                                       | Unit    | Notes                                       |
+| ------------------------------------------------------------ | ------- | ------------------------------------------- |
+| Smart Meter Gas: Import                                      | kWh     | Lifetime meter reading                      |
+| Smart Meter Gas: Import (Today / This week / This month)     | kWh     | Reset by the meter                          |
+| Smart Meter Gas: Import Vol                                  | m³      | Lifetime volume reading                     |
+| Smart Meter Gas: Import Vol (Today / This week / This month) | m³      | Reset by the meter                          |
+| Smart Meter Gas: Import Unit Rate                            | GBP/kWh | Current unit rate                           |
+| Smart Meter Gas: Import Standing Charge                      | GBP     | Daily standing charge                       |
+| Smart Meter Gas: Cost (Today)                                | GBP     | Standing charge + today's usage × unit rate |
 
 There is no live gas power sensor: the IHD stopped publishing gas power in software update 1.8.13 (June 2022).
 
@@ -93,9 +93,9 @@ In **Settings → Dashboards → Energy**:
 - **Electricity grid consumption:** `Smart Meter Electricity: Import`
 - **Return to grid:** `Smart Meter Electricity: Export` (if you export)
 - **Gas consumption:** `Smart Meter Gas: Import` (kWh) or `Smart Meter Gas: Import Vol` (m³)
-- **Cost:** choose *Use an entity with current price* and pick the matching **Import Unit Rate** sensor.
+- **Cost:** choose _Use an entity with current price_ and pick the matching **Import Unit Rate** sensor.
 
-The lifetime **Import** sensors give the most reliable statistics. The *Today* sensors and *Cost (Today)* reset every day, so a reset at an unexpected time can show up as a spike or a negative value.
+The lifetime **Import** sensors give the most reliable statistics. The _Today_ sensors and _Cost (Today)_ reset every day, so a reset at an unexpected time can show up as a spike or a negative value.
 
 ## Troubleshooting
 

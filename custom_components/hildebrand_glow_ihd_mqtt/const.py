@@ -1,6 +1,7 @@
-from itertools import cycle, islice
-from typing import Final
+"""Constants for the Home Assistant Hildebrand Glow IHD Integration."""
+
 from enum import Enum
+from typing import Final
 
 DOMAIN: Final = "hildebrand_glow_ihd"
 MIN_HA_VERSION = "2024.12"
@@ -21,7 +22,7 @@ CONF_TIME_ZONE_GAS = "time_zone_gas"
 CONF_TOPIC_PREFIX = "topic_prefix"
 
 DEFAULT_DEVICE_ID = "+"
-DEFAULT_TOPIC_PREFIX= "glow"
+DEFAULT_TOPIC_PREFIX = "glow"
 DEFAULT_TITLE = "Hildebrand Glow IHD"
 
 
@@ -31,6 +32,7 @@ def entry_title(device_id: str | None) -> str:
     if not device_id or device_id == DEFAULT_DEVICE_ID:
         return DEFAULT_TITLE
     return f"{DEFAULT_TITLE} ({device_id})"
+
 
 # Meter intervals
 class MeterInterval(Enum):

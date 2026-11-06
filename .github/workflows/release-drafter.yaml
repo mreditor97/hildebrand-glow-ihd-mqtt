@@ -1,0 +1,28 @@
+---
+name: Release Drafter
+
+# yamllint disable-line rule:truthy
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  update_release_draft:
+    name: ✏️ Draft release
+    runs-on: ubuntu-latest
+    permissions:
+      # Creates and updates the draft release
+      contents: write
+      # Reads the merged pull requests and their labels
+      pull-requests: read
+    steps:
+      - name: 🚀 Run Release Drafter
+        # release-drafter/release-drafter v7.10.0
+        uses: release-drafter/release-drafter@978bb0b30c5ee8cdd332ced253758157150d43f0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

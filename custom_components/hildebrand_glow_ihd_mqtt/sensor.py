@@ -1,18 +1,18 @@
 """Support for hildebrand glow MQTT sensors."""
 
 from __future__ import annotations
-from datetime import datetime, time, timedelta, tzinfo
+
 import json
 import logging
 import re
-from typing import Iterable
+from datetime import datetime, time, timedelta, tzinfo
+from typing import TYPE_CHECKING, Any
 from zoneinfo import ZoneInfo
 
 from homeassistant.components import mqtt
-from homeassistant.components.mqtt.models import ReceiveMessage
 from homeassistant.components.sensor import (
-    SensorEntity,
     SensorDeviceClass,
+    SensorEntity,
     SensorStateClass,
 )
 from homeassistant.const import (
@@ -37,11 +37,20 @@ from .const import (
     MeterInterval,
 )
 
+if TYPE_CHECKING:
+    from collections.abc import Callable, Iterable
+
+    from homeassistant.components.mqtt.models import ReceiveMessage
+    from homeassistant.config_entries import ConfigEntry
+    from homeassistant.core import HomeAssistant
+    from homeassistant.helpers.entity_platform import AddEntitiesCallback
+
 _LOGGER = logging.getLogger(__name__)
 
-# glow/XXXXXXYYYYYY/STATE                   {"software":"v1.8.12","timestamp":"2022-06-11T20:54:53Z","hardware":"GLOW-IHD-01-1v4-SMETS2","ethmac":"1234567890AB","smetsversion":"SMETS2","eui":"12:34:56:78:91:23:45","zigbee":"1.2.5","han":{"rssi":-75,"status":"joined","lqi":100}}
-# glow/XXXXXXYYYYYY/SENSOR/electricitymeter {"electricitymeter":{"timestamp":"2022-06-11T20:38:00Z","energy":{"export":{"cumulative":0.000,"units":"kWh"},"import":{"cumulative":6613.405,"day":13.252,"week":141.710,"month":293.598,"units":"kWh","mpan":"1234","supplier":"ABC ENERGY","price":{"unitrate":0.04998,"standingcharge":0.24030}}},"power":{"value":0.951,"units":"kW"}}}
-# glow/XXXXXXYYYYYY/SENSOR/gasmeter         {"gasmeter":{"timestamp":"2022-06-11T20:53:52Z","energy":{"export":{"cumulative":0.000,"units":"kWh"},"import":{"cumulative":17940.852,"day":11.128,"week":104.749,"month":217.122,"units":"kWh","mprn":"1234","supplier":"---","price":{"unitrate":0.07320,"standingcharge":0.17850}}},"power":{"value":0.000,"units":"kW"}}}
+# glow/XXXXXXYYYYYY/STATE                   {"software":"v1.8.12","timestamp":"2022-06-11T20:54:53Z","hardware":"GLOW-IHD-01-1v4-SMETS2","ethmac":"1234567890AB","smetsversion":"SMETS2","eui":"12:34:56:78:91:23:45","zigbee":"1.2.5","han":{"rssi":-75,"status":"joined","lqi":100}}  # noqa: E501
+# glow/XXXXXXYYYYYY/SENSOR/electricitymeter {"electricitymeter":{"timestamp":"2022-06-11T20:38:00Z","energy":{"export":{"cumulative":0.000,"units":"kWh"},"import":{"cumulative":6613.405,"day":13.252,"week":141.710,"month":293.598,"units":"kWh","mpan":"1234","supplier":"ABC ENERGY","price":{"unitrate":0.04998,"standingcharge":0.24030}}},"power":{"value":0.951,"units":"kW"}}}  # noqa: E501
+# glow/XXXXXXYYYYYY/SENSOR/gasmeter         {"gasmeter":{"timestamp":"2022-06-11T20:53:52Z","energy":{"export":{"cumulative":0.000,"units":"kWh"},"import":{"cumulative":17940.852,"day":11.128,"week":104.749,"month":217.122,"units":"kWh","mprn":"1234","supplier":"---","price":{"unitrate":0.07320,"standingcharge":0.17850}}},"power":{"value":0.000,"units":"kW"}}}  # noqa: E501
+
 
 def calculate_cost_today(meter_data: dict) -> float | None:
     """Return today's cost (standing charge + day kWh * unit rate).
@@ -300,15 +309,8 @@ GAS_SENSORS = [
         ],
         "ignore_zero_values": True,
     },
-    # Removed June 2022 in IHD software update 1.8.13
-    # {
-    #   "name": "Smart Meter Gas: Power",
-    #   "device_class": SensorDeviceClass.POWER,
-    #   "unit_of_measurement": UnitOfPower.KILO_WATT,
-    #   "state_class": SensorStateClass.MEASUREMENT,
-    #   "icon": "mdi:fire",
-    #   "func": lambda js : js['gasmeter']['power']['value'],
-    # },
+    # The "Smart Meter Gas: Power" sensor was removed in June 2022, IHD
+    # software update 1.8.13 stopped publishing the gas power value
     {
         "name": "Smart Meter Gas: Cost (Today)",
         "device_class": SensorDeviceClass.MONETARY,
@@ -321,28 +323,34 @@ GAS_SENSORS = [
 ]
 
 
-async def async_setup_entry(hass, config_entry, async_add_entities):
+async def async_setup_entry(
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+) -> None:
     """Set up the Smart Meter sensors."""
-
-    # the config is defaulted to + which happens to mean we will subscribe to all devices
+    # The config is defaulted to +, which means we subscribe to all devices
     device_mac = hass.data[DOMAIN][config_entry.entry_id][CONF_DEVICE_ID]
-    topic_prefix = hass.data[DOMAIN][config_entry.entry_id][CONF_TOPIC_PREFIX] or DEFAULT_TOPIC_PREFIX
+    topic_prefix = (
+        hass.data[DOMAIN][config_entry.entry_id][CONF_TOPIC_PREFIX]
+        or DEFAULT_TOPIC_PREFIX
+    )
     time_zone_electricity = hass.data[DOMAIN][config_entry.entry_id][
         CONF_TIME_ZONE_ELECTRICITY
     ]
     time_zone_gas = hass.data[DOMAIN][config_entry.entry_id][CONF_TIME_ZONE_GAS]
 
-    deviceUpdateGroups = {}
+    device_update_groups: dict[str, list[HildebrandGlowMqttSensorUpdateGroup]] = {}
 
     @callback
-    async def mqtt_message_received(message: ReceiveMessage):
+    async def mqtt_message_received(message: ReceiveMessage) -> None:
         """Handle received MQTT message."""
         topic = message.topic
         payload = message.payload
         device_id = topic.split("/")[1]
-        if device_mac == DEFAULT_DEVICE_ID or device_id == device_mac:
-            updateGroups = await async_get_device_groups(
-                deviceUpdateGroups,
+        if device_mac in (DEFAULT_DEVICE_ID, device_id):
+            update_groups = await async_get_device_groups(
+                device_update_groups,
                 async_add_entities,
                 device_id,
                 time_zone_electricity,
@@ -350,8 +358,8 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
             )
             _LOGGER.debug("Received message: %s", topic)
             _LOGGER.debug("  Payload: %s", payload)
-            for updateGroup in updateGroups:
-                updateGroup.process_update(message)
+            for update_group in update_groups:
+                update_group.process_update(message)
 
     data_topic = f"{topic_prefix}/#"
 
@@ -359,14 +367,14 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
 
 async def async_get_device_groups(
-    deviceUpdateGroups,
-    async_add_entities,
-    device_id,
-    time_zone_electricity,
-    time_zone_gas,
-):
-    # add to update groups if not already there
-    if device_id not in deviceUpdateGroups:
+    device_update_groups: dict[str, list[HildebrandGlowMqttSensorUpdateGroup]],
+    async_add_entities: AddEntitiesCallback,
+    device_id: str,
+    time_zone_electricity: str | None,
+    time_zone_gas: str | None,
+) -> list[HildebrandGlowMqttSensorUpdateGroup]:
+    """Return a device's update groups, adding its sensors when first seen."""
+    if device_id not in device_update_groups:
         _LOGGER.debug("New device found: %s", device_id)
         groups = [
             HildebrandGlowMqttSensorUpdateGroup(device_id, "STATE", STATE_SENSORS),
@@ -377,27 +385,34 @@ async def async_get_device_groups(
                 time_zone_electricity,
             ),
             HildebrandGlowMqttSensorUpdateGroup(
-                device_id, "gasmeter", GAS_SENSORS, time_zone_gas
+                device_id,
+                "gasmeter",
+                GAS_SENSORS,
+                time_zone_gas,
             ),
         ]
         async_add_entities(
             [
-                sensorEntity
-                for updateGroup in groups
-                for sensorEntity in updateGroup.all_sensors
+                sensor_entity
+                for update_group in groups
+                for sensor_entity in update_group.all_sensors
             ],
             # True
         )
-        deviceUpdateGroups[device_id] = groups
+        device_update_groups[device_id] = groups
 
-    return deviceUpdateGroups[device_id]
+    return device_update_groups[device_id]
 
 
 class HildebrandGlowMqttSensorUpdateGroup:
-    """Representation of Hildebrand Glow MQTT Meter Sensors that all get updated together."""
+    """Hildebrand Glow MQTT meter sensors that are all updated together."""
 
     def __init__(
-        self, device_id: str, topic_regex: str, meters: Iterable, time_zone: str | None = None
+        self,
+        device_id: str,
+        topic_regex: str,
+        meters: Iterable[dict[str, Any]],
+        time_zone: str | None = None,
     ) -> None:
         """Initialize the sensor collection."""
         self._topic_regex = re.compile(topic_regex)
@@ -425,19 +440,20 @@ class HildebrandGlowMqttSensorUpdateGroup:
 class HildebrandGlowMqttSensor(SensorEntity):
     """Representation of a room sensor that is updated via MQTT."""
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
-        device_id,
-        time_zone,
-        name,
-        icon,
-        device_class,
-        unit_of_measurement,
-        state_class,
-        func,
-        entity_category=None,
-        ignore_zero_values=False,
-        error_response_values=None,
+        *,
+        device_id: str,
+        time_zone: str | None,
+        name: str,
+        icon: str,
+        device_class: SensorDeviceClass | None,
+        unit_of_measurement: str | None,
+        state_class: SensorStateClass | None,
+        func: Callable[[dict[str, Any]], Any],
+        entity_category: EntityCategory | None = None,
+        ignore_zero_values: bool = False,
+        error_response_values: Iterable[Any] | None = None,
         meter_interval: MeterInterval | None = None,
     ) -> None:
         """Initialize the sensor."""
@@ -471,12 +487,16 @@ class HildebrandGlowMqttSensor(SensorEntity):
 
     @staticmethod
     def determine_last_reset(
-        message_datetime: datetime, meter_timezone: tzinfo, meter_interval: MeterInterval
+        message_datetime: datetime,
+        meter_timezone: tzinfo,
+        meter_interval: MeterInterval,
     ) -> datetime:
         """Return midnight of the meter's reset interval in UTC."""
         meter_datetime = message_datetime.astimezone(meter_timezone)
         meter_midnight = datetime.combine(
-            meter_datetime.date(), time.min, meter_datetime.tzinfo
+            meter_datetime.date(),
+            time.min,
+            meter_datetime.tzinfo,
         )
         if meter_interval == MeterInterval.DAY:
             last_reset = meter_midnight
@@ -489,7 +509,7 @@ class HildebrandGlowMqttSensor(SensorEntity):
         return last_reset.astimezone(ZoneInfo("UTC"))
 
     @staticmethod
-    def get_message_datetime(mqtt_data) -> datetime:
+    def get_message_datetime(mqtt_data: dict[str, Any]) -> datetime:
         """Return the message timestamp as a datetime."""
         timestamp = (
             mqtt_data.get("timestamp")
@@ -499,9 +519,10 @@ class HildebrandGlowMqttSensor(SensorEntity):
         try:
             return datetime.fromisoformat(timestamp)
         except (TypeError, ValueError) as err:
-            raise ValueError("Valid timestamp not present in MQTT data.") from err
+            msg = "Valid timestamp not present in MQTT data."
+            raise ValueError(msg) from err
 
-    def process_update(self, mqtt_data) -> None:
+    def process_update(self, mqtt_data: dict[str, Any]) -> None:
         """Update the state of the sensor."""
         try:
             new_value = self._func(mqtt_data)
@@ -518,7 +539,9 @@ class HildebrandGlowMqttSensor(SensorEntity):
             new_value = None
         if self._ignore_zero_values and new_value == 0:
             _LOGGER.debug(
-                "Ignored new value of %s on %s.", new_value, self._attr_unique_id
+                "Ignored new value of %s on %s.",
+                new_value,
+                self._attr_unique_id,
             )
             return
         if self._error_response_values and new_value in self._error_response_values:
@@ -530,26 +553,25 @@ class HildebrandGlowMqttSensor(SensorEntity):
             new_value = None
         self._attr_native_value = new_value
 
-        zoneInfo = None
+        zone_info = None
         if self._time_zone:
-            zoneInfo = self._time_zone
-        elif (self.hass is not None and 
-              self.hass.config is not None):
-            zoneInfo = self.hass.config.time_zone
-            
-        if zoneInfo and self._last_reset_reported and self._meter_interval:
+            zone_info = self._time_zone
+        elif self.hass is not None and self.hass.config is not None:
+            zone_info = self.hass.config.time_zone
+
+        if zone_info and self._last_reset_reported and self._meter_interval:
             self._attr_last_reset = self.determine_last_reset(
                 self.get_message_datetime(mqtt_data),
-                ZoneInfo(zoneInfo),
-                self._meter_interval
+                ZoneInfo(zone_info),
+                self._meter_interval,
             )
 
-        if (
-            self.hass is not None
-        ):  # this is a hack to get around the fact that the entity is not yet initialized at first
+        # The entity has no hass object until it is added, skip the state
+        # update until then
+        if self.hass is not None:
             self.async_schedule_update_ha_state()
 
     @property
-    def extra_state_attributes(self):
+    def extra_state_attributes(self) -> dict[str, Any]:
         """Return the state attributes."""
         return {ATTR_DEVICE_ID: self._device_id}

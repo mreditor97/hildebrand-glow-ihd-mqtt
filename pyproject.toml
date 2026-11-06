@@ -1,0 +1,63 @@
+[project]
+name = "integration-hildebrand-glow-ihd"
+version = "0.0.0"
+description = "Home Assistant Hildebrand Glow IHD Integration"
+license = "MIT"
+license-files = ["LICENSE"]
+readme = { file = "README.md", content-type = "text/markdown" }
+requires-python = ">=3.13"
+# The integration itself runs inside Home Assistant, this project only holds
+# the development tools used by the pre-commit hooks and CI
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/mreditor97/integration-hildebrand-glow-ihd"
+Documentation = "https://github.com/mreditor97/integration-hildebrand-glow-ihd"
+Repository = "https://github.com/mreditor97/integration-hildebrand-glow-ihd"
+"Bug Tracker" = "https://github.com/mreditor97/integration-hildebrand-glow-ihd/issues"
+Changelog = "https://github.com/mreditor97/integration-hildebrand-glow-ihd/releases"
+
+[dependency-groups]
+dev = [
+  "black==26.10.1",
+  "blacken-docs==1.20.0",
+  "codespell==2.4.3",
+  "pre-commit==4.7.0",
+  "pre-commit-hooks==6.0.0",
+  "ruff==0.17.4",
+  "yamllint==1.38.0",
+]
+
+[tool.uv]
+# Not a Python package, only a set of development tools
+package = false
+
+[tool.codespell]
+# commitish is an input name of the Release Drafter action, hass is the
+# Home Assistant core object
+ignore-words-list = "commitish,hass"
+
+[tool.ruff]
+target-version = "py313"
+lint.ignore = [
+  "ANN401", # Opinioated warning on disallowing dynamically typed expressions
+  "CPY001", # No copyright headers in this project
+  "D203", # Conflicts with other rules
+  "D213", # Conflicts with other rules
+  "D417", # False positives in some occasions
+  "PLR2004", # Just annoying, not really useful
+  "RUF012", # Disabled until it is Ruff finalises it
+  "FBT001", # Boolean-typed positional argument
+  "FBT002", # Boolean default positional argument
+  "FBT003", # Boolean positional value in function call
+  "PLC0206", # Disabled for now
+  "RUF100", # Disabled for now
+  "EXE002", # Disabled for now
+]
+lint.select = ["ALL"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["custom_components.hildebrand_glow_ihd"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 25
