@@ -2,6 +2,8 @@
 name = "integration-hildebrand-glow-ihd"
 version = "0.0.0"
 description = "Home Assistant Hildebrand Glow IHD Integration"
+license = "MIT"
+license-files = ["LICENSE"]
 readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.13"
 # The integration itself runs inside Home Assistant, this project only holds
