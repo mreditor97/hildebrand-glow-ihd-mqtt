@@ -55,7 +55,7 @@ lint.ignore = [
 lint.select = ["ALL"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["custom_components.hildebrand_glow_ihd_mqtt"]
+known-first-party = ["custom_components.hildebrand_glow_ihd"]
 
 [tool.ruff.lint.mccabe]
 max-complexity = 25
