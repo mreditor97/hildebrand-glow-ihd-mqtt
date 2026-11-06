@@ -21,20 +21,16 @@ The device publishes the readings from your SMETS1/SMETS2 smart meter to your MQ
 - A [Hildebrand Glow IHD or CAD](https://shop.glowmarkt.com/products/display-and-cad-combined-for-smart-meter-customers) paired with your smart meter.
 - An MQTT broker, such as the Mosquitto broker add-on, and the [MQTT integration](https://www.home-assistant.io/integrations/mqtt/) set up in Home Assistant.
 - Local MQTT turned on for your Glow device and pointed at your broker. This [guide by Joshua Cooper](https://medium.com/@joshua.cooper/glow-local-mqtt-f69b776b7af4) explains how.
-- Home Assistant 2026.4.0 or newer (the minimum set in `hacs.json`).
+- Home Assistant 2026.11 or newer, which includes the Marketplace.
 
 ## Installation
 
 ### Home Assistant Marketplace (recommended)
 
-Home Assistant 2026.11 replaced HACS with the built-in **Marketplace**, under **Settings**. It uses the same catalog and custom repositories as HACS.
-
 1. Open **Settings → Marketplace** and add this repository as a custom repository, with the type **Integration**:
-   `https://github.com/mreditor97/hildebrand-glow-ihd-mqtt`
-2. Search for **Hildebrand Glow IHD MQTT** and install it.
+   `https://github.com/mreditor97/integration-hildebrand-glow-ihd`
+2. Search for **Home Assistant Hildebrand Glow IHD Integration** and install it.
 3. Restart Home Assistant.
-
-On Home Assistant versions before 2026.11, follow the same steps in HACS.
 
 ### Manual
 
@@ -43,7 +39,7 @@ On Home Assistant versions before 2026.11, follow the same steps in HACS.
 
 ## Configuration
 
-Go to **Settings → Devices & services → Add integration** and search for **Hildebrand Glow IHD MQTT**.
+Go to **Settings → Devices & services → Add integration** and search for **Home Assistant Hildebrand Glow IHD Integration**.
 
 | Option | Default | Description |
 | --- | --- | --- |

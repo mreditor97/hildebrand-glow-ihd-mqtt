@@ -1,4 +1,4 @@
-"""Config flow for Hildebrand Glow IHD MQTT."""
+"""Config flow for the Home Assistant Hildebrand Glow IHD Integration."""
 import logging
 import voluptuous as vol
 import zoneinfo
