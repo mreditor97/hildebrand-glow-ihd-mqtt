@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 from awesomeversion.awesomeversion import AwesomeVersion
 from homeassistant.const import CONF_DEVICE_ID
 from homeassistant.const import __version__ as HA_VERSION  # noqa: N812
+from homeassistant.helpers import config_validation as cv
 
 from .const import (
     CONF_TIME_ZONE_ELECTRICITY,
@@ -27,6 +28,9 @@ if TYPE_CHECKING:
 _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS = ["sensor"]
+
+# Set up from the UI only, there is no YAML configuration
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
 async def async_setup(
