@@ -22,9 +22,10 @@ from .const import (
     CONF_TIME_ZONE_ELECTRICITY,
     CONF_TIME_ZONE_GAS,
     CONF_TOPIC_PREFIX,
+    DEFAULT_DEVICE_ID,
+    DEFAULT_TOPIC_PREFIX,
     DOMAIN,
 )
-from .glow import DEFAULT_DEVICE_ID, DEFAULT_TOPIC_PREFIX
 from .helpers import entry_title
 from .models import entry_settings
 

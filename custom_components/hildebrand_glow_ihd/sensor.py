@@ -22,18 +22,15 @@ from homeassistant.const import (
 )
 from homeassistant.core import callback
 
+from .const import DEFAULT_DEVICE_ID, POWER_ERROR_VALUE, MeterInterval, TopicKind
 from .entity import GlowEntity
-from .glow import (
-    DEFAULT_DEVICE_ID,
-    MeterInterval,
-    TopicKind,
+from .helpers import (
     calculate_cost_today,
     determine_last_reset,
     gas_volume,
     parse_message,
     subscription_topic,
 )
-from .glow.const import POWER_ERROR_VALUE
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -43,7 +40,7 @@ if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
     from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-    from .glow import GlowMessage
+    from .helpers import GlowMessage
     from .models import GlowConfigEntry
 
 _LOGGER = logging.getLogger(__name__)

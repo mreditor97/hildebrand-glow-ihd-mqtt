@@ -122,7 +122,7 @@ logger:
 
 ## Development
 
-The integration is in `custom_components/hildebrand_glow_ihd`. The files Home Assistant loads by name (`__init__.py`, `config_flow.py`, `sensor.py`, `manifest.json` and the translations) are at the top of that folder. The `glow` package inside it reads the topics and payloads the Glow device publishes, and has no Home Assistant imports.
+The integration is in `custom_components/hildebrand_glow_ihd`. The files Home Assistant loads by name (`__init__.py`, `config_flow.py`, `sensor.py`, `manifest.json` and the translations) are at the top of that folder. `helpers.py` reads the topics and payloads the Glow device publishes.
 
 The development tools need [uv](https://docs.astral.sh/uv/) and Python 3.14. The tests run against the Home Assistant version that `pytest-homeassistant-custom-component` pins in `pyproject.toml`.
 
