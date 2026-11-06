@@ -1,7 +1,7 @@
 {
   "domain": "hildebrand_glow_ihd",
   "name": "Home Assistant Hildebrand Glow IHD Integration",
-  "codeowners": ["@megakid"],
+  "codeowners": ["@megakid", "@mreditor97"],
   "config_flow": true,
   "dependencies": ["mqtt"],
   "documentation": "https://github.com/mreditor97/integration-hildebrand-glow-ihd",
