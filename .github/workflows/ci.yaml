@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 env:
-  DEFAULT_PYTHON: '3.13'
+  DEFAULT_PYTHON: '3.14'
 
 jobs:
   codespell:
@@ -113,6 +113,22 @@ jobs:
       - name: 🚀 Check Renovate configuration
         run: uv run pre-commit run renovate-config-validator --all-files
 
+  mypy:
+    name: MyPy
+    runs-on: ubuntu-latest
+    steps:
+      - name: ⤵️ Check out code from GitHub
+        uses: actions/checkout@v7
+      - name: 🏗 Set up uv and Python ${{ env.DEFAULT_PYTHON }}
+        # astral-sh/setup-uv v10.3.3
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2
+        with:
+          python-version: ${{ env.DEFAULT_PYTHON }}
+      - name: 🏗 Install Python dependencies
+        run: uv sync --locked
+      - name: 🚀 Run mypy
+        run: uv run mypy
+
   prettier:
     name: Prettier
     runs-on: ubuntu-latest
@@ -135,6 +151,22 @@ jobs:
         run: npm install
       - name: 🚀 Run prettier
         run: uv run pre-commit run prettier --all-files
+
+  pytest:
+    name: Pytest
+    runs-on: ubuntu-latest
+    steps:
+      - name: ⤵️ Check out code from GitHub
+        uses: actions/checkout@v7
+      - name: 🏗 Set up uv and Python ${{ env.DEFAULT_PYTHON }}
+        # astral-sh/setup-uv v10.3.3
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2
+        with:
+          python-version: ${{ env.DEFAULT_PYTHON }}
+      - name: 🏗 Install Python dependencies
+        run: uv sync --locked
+      - name: 🚀 Run pytest
+        run: uv run pytest
 
   yamllint:
     name: yamllint

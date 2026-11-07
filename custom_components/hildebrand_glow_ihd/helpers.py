@@ -1,9 +1,16 @@
-"""Helpers for the Home Assistant Hildebrand Glow IHD Integration."""
+"""Helpers for the Home Assistant Hildebrand Glow IHD Integration.
+
+These read the MQTT topics and payloads a Glow device publishes, and
+calculate values from its meter readings.
+"""
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import UTC, datetime, time, timedelta, tzinfo
 from typing import Any
+
+from homeassistant.util.json import json_loads_object
 
 from .const import (
     DEFAULT_DEVICE_ID,
@@ -11,6 +18,7 @@ from .const import (
     DEFAULT_TOPIC_PREFIX,
     GAS_VOLUME_UNITS,
     MeterInterval,
+    TopicKind,
 )
 
 
@@ -22,11 +30,19 @@ def entry_title(device_id: str | None) -> str:
     return f"{DEFAULT_TITLE} ({device_id})"
 
 
+@dataclass(frozen=True, slots=True)
+class GlowTopic:
+    """The device and kind of message an MQTT topic is for."""
+
+    device_id: str
+    kind: TopicKind
+
+
 def normalize_device_id(device_id: str | None) -> str:
     """Return a device ID in the form the IHD uses in its MQTT topics.
 
     The ID is the device's MAC address in upper case without separators,
-    e.g. ``AABBCCDDEEFF``. ``+`` matches every device.
+    e.g. ``AABBCCDDEEFF``. A blank ID, like ``+``, matches every device.
     """
     normalized = (device_id or "").strip().upper().replace(":", "").replace(" ", "")
     return normalized or DEFAULT_DEVICE_ID
@@ -36,6 +52,81 @@ def normalize_topic_prefix(topic_prefix: str | None) -> str:
     """Return a topic prefix with wildcards, spaces and slashes removed."""
     normalized = (topic_prefix or "").strip().replace("#", "").replace(" ", "")
     return normalized.strip("/") or DEFAULT_TOPIC_PREFIX
+
+
+def subscription_topic(topic_prefix: str, device_id: str) -> str:
+    """Return the MQTT topic filter for one device's messages, or every device's."""
+    return f"{topic_prefix}/{device_id}/#"
+
+
+def parse_topic(topic_prefix: str, topic: str) -> GlowTopic | None:
+    """Return the device and kind of message a topic is for.
+
+    Returns None for a topic that isn't under the prefix or isn't one of the
+    kinds in ``TopicKind``.
+    """
+    prefix = f"{topic_prefix}/"
+    if not topic.startswith(prefix):
+        return None
+    device_id, _, rest = topic.removeprefix(prefix).partition("/")
+    if not device_id or not rest:
+        return None
+    try:
+        kind = TopicKind(rest.rpartition("/")[2])
+    except ValueError:
+        return None
+    return GlowTopic(device_id=device_id, kind=kind)
+
+
+@dataclass(frozen=True, slots=True)
+class GlowMessage:
+    """A message from a Glow device, with its JSON payload decoded."""
+
+    device_id: str
+    kind: TopicKind
+    payload: dict[str, Any]
+    # When the IHD sent the message, or None if the payload has no timestamp
+    timestamp: datetime | None
+
+
+def payload_timestamp(payload: dict[str, Any]) -> datetime | None:
+    """Return the timestamp of a payload, or None if it has no valid one."""
+    timestamp = payload.get("timestamp")
+    for meter in ("electricitymeter", "gasmeter"):
+        if timestamp:
+            break
+        meter_data = payload.get(meter)
+        if isinstance(meter_data, dict):
+            timestamp = meter_data.get("timestamp")
+    try:
+        return datetime.fromisoformat(timestamp)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return None
+
+
+def parse_message(
+    topic_prefix: str,
+    topic: str,
+    payload: str | bytes | bytearray,
+) -> GlowMessage | None:
+    """Return a Glow message, or None if the topic or payload isn't one.
+
+    Messages on other topics, and payloads that aren't a JSON object, are
+    ignored rather than raising.
+    """
+    glow_topic = parse_topic(topic_prefix, topic)
+    if glow_topic is None:
+        return None
+    try:
+        data = json_loads_object(payload)
+    except ValueError:
+        return None
+    return GlowMessage(
+        device_id=glow_topic.device_id,
+        kind=glow_topic.kind,
+        payload=data,
+        timestamp=payload_timestamp(data),
+    )
 
 
 def calculate_cost_today(meter_data: dict[str, Any]) -> float | None:
@@ -70,20 +161,8 @@ def gas_volume(payload: dict[str, Any], field: str, units_field: str) -> float |
     units = energy_import.get(units_field)
     if units is not None and str(units).strip().lower() not in GAS_VOLUME_UNITS:
         return None
-    return energy_import[field]
-
-
-def message_datetime(payload: dict[str, Any]) -> datetime | None:
-    """Return the timestamp of an MQTT payload, or None if it has none."""
-    timestamp = (
-        payload.get("timestamp")
-        or payload.get("electricitymeter", {}).get("timestamp")
-        or payload.get("gasmeter", {}).get("timestamp")
-    )
-    try:
-        return datetime.fromisoformat(timestamp)
-    except (TypeError, ValueError):
-        return None
+    value: float = energy_import[field]
+    return value
 
 
 def determine_last_reset(

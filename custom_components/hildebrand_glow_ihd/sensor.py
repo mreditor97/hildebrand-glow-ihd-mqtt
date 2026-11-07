@@ -21,22 +21,15 @@ from homeassistant.const import (
     UnitOfVolume,
 )
 from homeassistant.core import callback
-from homeassistant.util.json import json_loads
 
-from .const import (
-    DEFAULT_DEVICE_ID,
-    POWER_ERROR_VALUE,
-    TOPIC_ELECTRICITY_METER,
-    TOPIC_GAS_METER,
-    TOPIC_STATE,
-    MeterInterval,
-)
+from .const import DEFAULT_DEVICE_ID, POWER_ERROR_VALUE, MeterInterval, TopicKind
 from .entity import GlowEntity
 from .helpers import (
     calculate_cost_today,
     determine_last_reset,
     gas_volume,
-    message_datetime,
+    parse_message,
+    subscription_topic,
 )
 
 if TYPE_CHECKING:
@@ -47,6 +40,7 @@ if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
     from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
+    from .helpers import GlowMessage
     from .models import GlowConfigEntry
 
 _LOGGER = logging.getLogger(__name__)
@@ -327,72 +321,71 @@ async def async_setup_entry(
 ) -> None:
     """Set up the Glow sensors, adding each device's when it first publishes."""
     settings = entry.runtime_data
-    prefix = f"{settings.topic_prefix}/"
-    # The time zone each topic's resets are reported in
-    topic_time_zones: dict[str, tzinfo | None] = {
-        TOPIC_STATE: None,
-        TOPIC_ELECTRICITY_METER: settings.time_zone_electricity,
-        TOPIC_GAS_METER: settings.time_zone_gas,
+    # The time zone each kind of message's resets are reported in
+    time_zones: dict[TopicKind, tzinfo | None] = {
+        TopicKind.STATE: None,
+        TopicKind.ELECTRICITY_METER: settings.time_zone_electricity,
+        TopicKind.GAS_METER: settings.time_zone_gas,
     }
-    # The sensors of each device found so far, by the topic that updates them
-    devices: dict[str, dict[str, list[GlowSensor]]] = {}
+    descriptions_by_kind: dict[TopicKind, tuple[GlowSensorEntityDescription, ...]] = {
+        TopicKind.STATE: STATE_SENSORS,
+        TopicKind.ELECTRICITY_METER: ELECTRICITY_SENSORS,
+        TopicKind.GAS_METER: GAS_SENSORS,
+    }
+    # The sensors of each device found so far, by the kind of message that
+    # updates them
+    devices: dict[str, dict[TopicKind, list[GlowSensor]]] = {}
 
     @callback
-    def async_add_device(device_id: str) -> dict[str, list[GlowSensor]]:
+    def async_add_device(device_id: str) -> dict[TopicKind, list[GlowSensor]]:
         """Add the sensors of a newly found device."""
         _LOGGER.debug("New Glow device found: %s", device_id)
         sensors = {
-            topic: [
-                GlowSensor(device_id, description, topic_time_zones[topic])
+            kind: [
+                GlowSensor(device_id, description, time_zones[kind])
                 for description in descriptions
             ]
-            for topic, descriptions in (
-                (TOPIC_STATE, STATE_SENSORS),
-                (TOPIC_ELECTRICITY_METER, ELECTRICITY_SENSORS),
-                (TOPIC_GAS_METER, GAS_SENSORS),
-            )
+            for kind, descriptions in descriptions_by_kind.items()
         }
         async_add_entities(
-            sensor for topic_sensors in sensors.values() for sensor in topic_sensors
+            sensor for kind_sensors in sensors.values() for sensor in kind_sensors
         )
         devices[device_id] = sensors
         return sensors
 
     @callback
-    def async_message_received(message: ReceiveMessage) -> None:
+    def async_message_received(mqtt_message: ReceiveMessage) -> None:
         """Update a device's sensors from an MQTT message."""
-        topic = message.topic
-        if not topic.startswith(prefix):
+        message = parse_message(
+            settings.topic_prefix,
+            mqtt_message.topic,
+            mqtt_message.payload,
+        )
+        if message is None:
+            _LOGGER.debug(
+                "Ignored message on %s, it is not a Glow message",
+                mqtt_message.topic,
+            )
             return
-        device_id, _, rest = topic.removeprefix(prefix).partition("/")
-        topic_name = rest.rpartition("/")[2]
-        if topic_name not in topic_time_zones:
-            return
-        if settings.device_id not in (DEFAULT_DEVICE_ID, device_id):
-            return
-
-        _LOGGER.debug("Received message on %s: %s", topic, message.payload)
-        try:
-            payload = json_loads(message.payload)
-        except ValueError:
-            _LOGGER.debug("Ignored message on %s, it is not valid JSON", topic)
-            return
-        if not isinstance(payload, dict):
-            _LOGGER.debug("Ignored message on %s, it is not a JSON object", topic)
+        if settings.device_id not in (DEFAULT_DEVICE_ID, message.device_id):
             return
 
-        sensors = devices.get(device_id) or async_add_device(device_id)
-        for sensor in sensors[topic_name]:
-            sensor.async_process_payload(payload)
+        _LOGGER.debug(
+            "Received message on %s: %s",
+            mqtt_message.topic,
+            mqtt_message.payload,
+        )
+        sensors = devices.get(message.device_id) or async_add_device(
+            message.device_id,
+        )
+        for sensor in sensors[message.kind]:
+            sensor.async_process_message(message)
 
     # Subscribe to one device's topics when one is set, otherwise to all
-    device_topic = (
-        "+" if settings.device_id == DEFAULT_DEVICE_ID else settings.device_id
-    )
     entry.async_on_unload(
         await mqtt.async_subscribe(
             hass,
-            f"{prefix}{device_topic}/#",
+            subscription_topic(settings.topic_prefix, settings.device_id),
             async_message_received,
             qos=1,
         ),
@@ -418,11 +411,11 @@ class GlowSensor(GlowEntity, SensorEntity):
             self._attr_last_reset = None
 
     @callback
-    def async_process_payload(self, payload: dict[str, Any]) -> None:
-        """Update the sensor from an MQTT payload."""
+    def async_process_message(self, message: GlowMessage) -> None:
+        """Update the sensor from a Glow message."""
         description = self.entity_description
         try:
-            value = description.value_fn(payload)
+            value = description.value_fn(message.payload)
         except (KeyError, IndexError, TypeError) as err:
             # A field this sensor depends on is missing or null in the payload
             # (e.g. no tariff data from the supplier). Report the state as
@@ -450,10 +443,10 @@ class GlowSensor(GlowEntity, SensorEntity):
         if (
             description.meter_interval is not None
             and self._time_zone is not None
-            and (message_time := message_datetime(payload)) is not None
+            and message.timestamp is not None
         ):
             self._attr_last_reset = determine_last_reset(
-                message_time,
+                message.timestamp,
                 self._time_zone,
                 description.meter_interval,
             )
